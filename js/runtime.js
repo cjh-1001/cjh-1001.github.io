@@ -26,7 +26,7 @@ function updateRuntime() {
     statusHtml = "<span class='boardsign-text'>🌙 小窝打烊了 — </span>";
   }
 
-  const timeHtml = `小窝已经开业了 ${years} 年 ${days} 天 ${formatZero(hours)} : ${formatZero(minutes)} : ${formatZero(seconds)}`;
+  const timeHtml = `小窝偷偷营业 ${years} 年 ${days} 天 ${formatZero(hours)} : ${formatZero(minutes)} : ${formatZero(seconds)}`;
   const currentTimeHtml = `${statusHtml}${timeHtml}`;
 
   // 更新 workboard 元素

