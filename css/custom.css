@@ -404,6 +404,18 @@ a.title {
     min-height: 2.5em;
     line-height: 1.25em;
 }
+.author-info-note {
+  font-size: 14px;
+  color: #666;
+  margin: 8px 0;
+  line-height: 1.4;
+  text-align: left;
+}
+
+html[data-theme="dark"] .author-info-note {
+  color: #aaa;
+}
+
 /* 电子钟字体引入 */
 @font-face {
   font-family: 'UnidreamLED';
